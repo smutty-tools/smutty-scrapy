@@ -127,4 +127,4 @@ Create a database user, and a database for this user :
 
 Create a schema for the data in the database :
 
-    echo "CREATE SCHEMA smutty;" | psql -U smuttyuser -d smuttydb
+    echo "CREATE SCHEMA smutty;" | psql -h localhost -U smuttyuser -d smuttydb
