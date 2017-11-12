@@ -1,0 +1,6 @@
+pkg-resources==0.0.0
+wheel==0.30.0
+Scrapy==1.4.0
+SQLAlchemy==1.1.15
+psycopg2==2.7.3.2
+pytz==2017.3
