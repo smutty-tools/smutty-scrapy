@@ -58,6 +58,17 @@ class Item(DeclarativeBase):
         'polymorphic_identity': 0,
     }
 
+    def export_dict(self, with_tags=True):
+        d = {
+            "item_id": self.item_id,
+            "submitter": self.submitter,
+            "sub_page": self.sub_page,
+            "last_updated": self.last_updated.__str__()
+        }
+        if with_tags:
+            d["tags"] = [t.name for t in self.tags]
+        return d
+
 
 class Image(Item):
     __tablename__ = 'images'
@@ -73,6 +84,11 @@ class Image(Item):
     __mapper_args__ = {
         'polymorphic_identity': 1,
     }
+
+    def export_dict(self, with_tags=True):
+        d = super().export_dict(with_tags)
+        d["image_url"] = self.image_url
+        return d
 
 
 class Video(Item):
@@ -91,6 +107,13 @@ class Video(Item):
     __mapper_args__ = {
         'polymorphic_identity': 2,
     }
+
+    def export_dict(self, with_tags=True):
+        d = super().export_dict(with_tags)
+        d["poster_url"] = self.poster_url
+        d["video_url"] = self.video_url
+        d["video_mime"] = self.video_mime
+        return d
 
 
 # must be last as it collects info from previous table declarations
