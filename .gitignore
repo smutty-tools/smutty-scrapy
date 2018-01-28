@@ -99,3 +99,7 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# sublimetext files
+*.sublime-project
+*.sublime-workspace
