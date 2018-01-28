@@ -29,7 +29,7 @@ class App:
         parser.add_argument("-c", "--page-count", metavar="PAGE_COUNT", type=int)
         parser.add_argument("-m", "--min-id", metavar="MIN_ID", type=int)
         parser.add_argument("-b", "--blacklist-tag-file", metavar="BLACKLIST_FILE", type=str)
-        parser.add_argument("config", metavar="CONFIG", type=str, default="smutty.conf")
+        parser.add_argument("config", metavar="CONFIG", type=str, nargs='?', default="smutty.conf")
         args = parser.parse_args()
 
         # exit early if nothing will be done
