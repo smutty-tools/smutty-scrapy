@@ -103,3 +103,6 @@ ENV/
 # sublimetext files
 *.sublime-project
 *.sublime-workspace
+
+# state files
+*.state
