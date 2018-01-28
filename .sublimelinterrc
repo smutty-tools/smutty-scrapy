@@ -1,0 +1,11 @@
+{
+	"@python": 3,
+	"linters":
+	{
+		"flake8":
+		{
+			"executable": "${project}/venv/bin/flake8",
+			"args": ["--max-line-length=120"]
+		}
+	}
+}
