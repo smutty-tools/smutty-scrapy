@@ -1,13 +1,13 @@
-#!/usr/bin/env python3
+import argparse
+import scrapy
+import scrapy.crawler
+import scrapy.utils.project
+import sqlalchemy.engine.url
+import sys
 
-if __name__ == '__main__':
+from smutty.spiders.smutty_spider import SmuttySpiderSpider
 
-    import argparse
-    import scrapy
-    import scrapy.crawler
-    import scrapy.utils.project
-    import sqlalchemy.engine.url
-    import sys
+def main():
 
     # analyze commande line arguments
     parser = argparse.ArgumentParser(description="Smutty metadata scrapper")
@@ -50,5 +50,8 @@ if __name__ == '__main__':
     settings.set("SMUTTY_BLACKLIST_TAG_FILE", args.blacklist_tag_file)
 
     process = scrapy.crawler.CrawlerProcess(settings)
-    process.crawl('smutty_spider')
+    process.crawl(SmuttySpiderSpider)
     process.start()  # it blocks here until finished
+
+# run
+main()
