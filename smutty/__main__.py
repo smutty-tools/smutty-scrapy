@@ -1,57 +1,119 @@
+"""
+foo
+"""
 import argparse
+import configparser
+import logging
+import sys
+
 import scrapy
 import scrapy.crawler
 import scrapy.utils.project
 import sqlalchemy.engine.url
-import sys
+
+import smutty.settings
+import smutty.pipelines
 
 from smutty.spiders.smutty_spider import SmuttySpiderSpider
 
-def main():
 
-    # analyze commande line arguments
-    parser = argparse.ArgumentParser(description="Smutty metadata scrapper")
-    parser.add_argument("-s", "--start-page", metavar="START_PAGE", type=int, default=1)
-    parser.add_argument("-c", "--page-count", metavar="PAGE_COUNT", type=int)
-    parser.add_argument("-m", "--min-id", metavar="MIN_ID", type=int, nargs="?", const="-1")
-    parser.add_argument("-b", "--blacklist-tag-file", metavar="BLACKLIST_FILE", type=str)
-    parser.add_argument("-d", "--database", metavar="DATABASE_CONFIG", type=str, nargs="+")
-    args = parser.parse_args()
+class App:
+    """
+    foo
+    """
 
-    if args.page_count is not None and int(args.page_count) == 0:
-        sys.exit(0)
+    def __init__(self):
+        # analyze commande line arguments
+        parser = argparse.ArgumentParser(description="Smutty metadata scrapper")
+        parser.add_argument("-s", "--start-page", metavar="START_PAGE", type=int)
+        parser.add_argument("-c", "--page-count", metavar="PAGE_COUNT", type=int)
+        parser.add_argument("-m", "--min-id", metavar="MIN_ID", type=int)
+        parser.add_argument("-b", "--blacklist-tag-file", metavar="BLACKLIST_FILE", type=str)
+        parser.add_argument("config", metavar="CONFIG", type=str, default="smutty.conf")
+        args = parser.parse_args()
 
-    settings = scrapy.utils.project.get_project_settings()
+        # exit early if nothing will be done
+        if args.page_count is not None and int(args.page_count) == 0:
+            sys.exit(0)
 
-    if args.database is not None:
-        # drivername, host, port, username, password, database, query
-        params = dict(s.split("=") for s in args.database)
-        # drivername, host, port, username, password, database, query
+        # load configuration
+        self._config = configparser.ConfigParser()
         try:
-            url = sqlalchemy.engine.url.URL(**params)
-            print(url)
-            settings.set("SMUTTY_DATABASE_CONFIGURATION_URL", url)
-        except Exception as e:
-            print("Error while parsing database configuration: {0} - {1}".format(type(e).__name__, e))
-            sys.exit(1)
+            with open(args.config) as config_fileobj:
+                self._config.read_file(config_fileobj, source=args.config)
+        except FileNotFoundError as exception:
+            raise smutty.SmuttyException("Could not find file: {0}".format(exception))
 
-    if args.min_id is not None and args.min_id == -1:
-        from smutty.models import Item, create_all_tables
-        engine = sqlalchemy.create_engine(settings.get("SMUTTY_DATABASE_CONFIGURATION_URL"))
-        create_all_tables(engine)
-        Session = sqlalchemy.orm.sessionmaker(bind=engine)
-        session = Session()
-        latest = session.query(sqlalchemy.func.max(Item.item_id)).scalar()
-        args.min_id = latest
+        # process configuration
+        try:
+            self._current_page_state = smutty.IntegerStateFile(self._config['state_files']['current_page'])
+            self._highest_id_state = smutty.IntegerStateFile(self._config['state_files']['highest_id'])
+            self._lowest_id_state = smutty.IntegerStateFile(self._config['state_files']['lowest_id'])
+            self._database_url = sqlalchemy.engine.url.URL(
+                drivername=self._config['database']['drivername'],
+                host=self._config['database']['host'],
+                port=self._config['database']['port'],
+                username=self._config['database']['username'],
+                password=self._config['database']['password'],
+                database=self._config['database']['database']
+                )
+        except KeyError as exception:
+            raise smutty.SmuttyException("Problem while reading configuration: {0}".format(exception))
 
-    settings.set("SMUTTY_START_PAGE", args.start_page)
-    settings.set("SMUTTY_PAGE_COUNT", args.page_count)
-    settings.set("SMUTTY_MIN_ID", args.min_id)
-    settings.set("SMUTTY_BLACKLIST_TAG_FILE", args.blacklist_tag_file)
+        # manage start page :
+        # - start based on state file
+        # - override if necessary
+        # - persist to make sure it exists
+        current_page = self._current_page_state.get()
+        if args.start_page is not None:
+            current_page = args.start_page
+        if current_page is None or current_page == 0:
+            current_page = 1
+        self._current_page_state.set(current_page)
 
-    process = scrapy.crawler.CrawlerProcess(settings)
-    process.crawl(SmuttySpiderSpider)
-    process.start()  # it blocks here until finished
+        # manage min id
+        # - start based on state file
+        # - override if necessary
+        # - if defined, make sure state file exists
+        min_id = self._lowest_id_state.get()
+        if args.min_id is not None:
+            min_id = args.min_id
+        if min_id is not None:
+            self._lowest_id_state.set(min_id)
+
+        # manage settings
+        self._settings = scrapy.utils.project.get_project_settings()
+        self._settings.setmodule(smutty.settings)
+
+        self._settings.set("SMUTTY_PAGE_COUNT", args.page_count)
+        self._settings.set("SMUTTY_BLACKLIST_TAG_FILE", args.blacklist_tag_file)
+        self._settings.set("SMUTTY_DATABASE_CONFIGURATION_URL", self._database_url)
+        self._settings.set("SMUTTY_STATE_CURRENT_PAGE", self._current_page_state)
+        self._settings.set("SMUTTY_STATE_HIGHEST_ID", self._highest_id_state)
+        self._settings.set("SMUTTY_STATE_LOWEST_ID", self._lowest_id_state)
+
+    def run(self):
+        """
+        foo
+        """
+        process = scrapy.crawler.CrawlerProcess(self._settings)
+        process.crawl(SmuttySpiderSpider)
+        process.start()  # it blocks here until finished
+
+
+def main():
+    """
+    foo
+    """
+    try:
+        app = App()
+        app.run()
+    except smutty.SmuttyException as exception:
+        logging.error("%s", exception)
+    except Exception as exception:
+        logging.critical("%s: %s", exception.__class__.__name__, exception)
+        raise
+
 
 # run
 main()
