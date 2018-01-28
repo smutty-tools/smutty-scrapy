@@ -106,3 +106,6 @@ ENV/
 
 # state files
 *.state
+
+# local configuration file
+*.conf
