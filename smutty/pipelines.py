@@ -1,15 +1,10 @@
-# -*- coding: utf-8 -*-
-
-# Define your item pipelines here
-#
-# Don't forget to add your pipeline to the ITEM_PIPELINES setting
-# See: http://doc.scrapy.org/en/latest/topics/item-pipeline.html
-
 import sqlalchemy.orm
 import sqlalchemy.ext.declarative
+import scrapy.exceptions
 
 from smutty.models import Tag, Item, Image, Video, create_all_tables
 from smutty.items import SmuttyImage, SmuttyVideo
+
 
 class SmuttyDatabasePipeline(object):
 
