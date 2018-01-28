@@ -101,18 +101,16 @@ To setup your database, on a fresh Debian/Strech system, install software :
 
 If you plan to connect to the database from another host, reconfigure postgresql :
 
-    su - postgres
-
+    sudo -i -u postgres
     # allow remote connections
     for MASK in "0.0.0.0/0" "::/0"; do
         echo "host all all ${MASK} md5"
     done >> /etc/postgresql/*/main/pg_hba.conf
-
     # listen on external addresses
     sed -i -e \
         's/^.*\b\(listen_addresses\)\b.*=.*$/\1 = '\''*'\''/' \
         /etc/postgresql/*/main/postgresql.conf
-
+    # exit postgres user
     exit
 
     # apply new configuration
@@ -120,8 +118,7 @@ If you plan to connect to the database from another host, reconfigure postgresql
 
 Create a database user, and a database for this user :
 
-    su - postgres
-
+    sudo -i -u postgres
     echo "CREATE USER smuttyuser WITH LOGIN ENCRYPTED PASSWORD 'smuttypassword';
     CREATE DATABASE smuttydb OWNER smuttyuser;" | psql
 
