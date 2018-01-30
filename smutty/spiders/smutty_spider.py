@@ -34,10 +34,9 @@ class SmuttySpiderSpider(scrapy.Spider):
         self._current_page_state = current_page_state
         self._highest_id_state = highest_id_state
         self._highest_id = self._highest_id_state.get()
-        self.logger.warning("Highest id is {0}".format(self._highest_id))
         self._lowest_id_state = lowest_id_state
         self._lowest_id = self._lowest_id_state.get()
-        self.logger.warning("Lowest id is {0}".format(self._lowest_id))
+        self.logger.info("State: highest_id={0} lowest_id={1} current_page={2}".format(self._highest_id, self._lowest_id, self._current_page_state.get()))
         self.load_blacklist_tag(blacklist_tag_file)
         # limit
         self._end_page = None
@@ -60,13 +59,25 @@ class SmuttySpiderSpider(scrapy.Spider):
     def finalize_run(self):
         self.logger.info("Finalizing states")
 
+        # trace before
+        high = self._highest_id_state.get()
+        low = self._lowest_id_state.get()
+        cur_page = self._current_page_state.get()
+        self.logger.info("Before: highest_id={0} lowest_id={1} current_page={2}".format(high, low, cur_page))
+
         # we memorize highest seen id as new lowest id, for next run
-        self._lowest_id_state.set(self._highest_id_state.get())
+        self._lowest_id_state.set(self._highest_id)
 
         # we clean up for a new "from newest" run
         with contextlib.suppress(FileNotFoundError):
             self._highest_id_state.delete()    # we forget highest id
             self._current_page_state.delete()  # run will restart from first page
+
+        # trace after
+        high = self._highest_id_state.get()
+        low = self._lowest_id_state.get()
+        cur_page = self._current_page_state.get()
+        self.logger.info("After: highest_id={0} lowest_id={1} current_page={2}".format(high, low, cur_page))
 
     def parse(self, response):
         self.logger.info("Parsing page {0}".format(response.meta["page_number"]))
@@ -95,13 +106,13 @@ class SmuttySpiderSpider(scrapy.Spider):
 
             # set highest id if not already set
             if self._highest_id is None:
-                self.logger.warning("Memorizing {0} as highest id".format(item_id))
+                self.logger.info("Memorizing {0} as highest id".format(item_id))
                 self._highest_id = item_id
                 self._highest_id_state.set(item_id)
 
             # check for minimum bound
             if self._lowest_id and item_id <= self._lowest_id:
-                self.logger.warning("Reached id {0} which is below lowest id {1} as highest id".format(item_id, self._lowest_id))
+                self.logger.info("Reached id {0} which is below lowest id {1} as highest id".format(item_id, self._lowest_id))
                 self.finalize_run()
                 return
 
