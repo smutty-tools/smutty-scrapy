@@ -1,17 +1,19 @@
+import logging
 import sqlalchemy.orm
 import sqlalchemy.ext.declarative
 
 from smutty.models import Tag, Item, Image, Video, create_all_tables
-from smutty.items import SmuttyImage, SmuttyVideo
+from smutty.scraper.items import SmuttyImage, SmuttyVideo
 
 
-class SmuttyDatabasePipeline(object):
+class SmuttyDatabasePipeline:
 
     @classmethod
     def from_crawler(cls, crawler):
         return cls(crawler.settings.get("SMUTTY_DATABASE_CONFIGURATION_URL"))
 
     def __init__(self, database_configuration_url):
+        self.logger = logging.getLogger(self.__class__.__name__)
         engine = sqlalchemy.create_engine(database_configuration_url)
         create_all_tables(engine)
         self.Session = sqlalchemy.orm.sessionmaker(bind=engine)
@@ -63,16 +65,22 @@ class SmuttyDatabasePipeline(object):
         session = self.Session()
 
         # item already exists
-        if session.query(Item).filter_by(item_id=item["item_id"]).first():
+        item_id = item["item_id"]
+        if session.query(Item).filter_by(item_id=item_id).first():
+            self.logger.debug("Item %d already exists, skipping", item_id)
             return item
 
         # persist items
         if isinstance(item, SmuttyImage):
             orm_item = self.process_image(session, item)
+            self.logger.debug("Saving image id %d", item_id)
             self.save_item(session, orm_item)
         elif isinstance(item, SmuttyVideo):
             orm_item = self.process_video(session, item)
+            self.logger.debug("Saving video id %d", item_id)
             self.save_item(session, orm_item)
+        else:
+            self.logger.warning("Not processing unknown element: %s", item)
 
         # feed to other pipelines
         return item

@@ -2,12 +2,12 @@ import contextlib
 import datetime
 import pytz
 import scrapy
-import smutty.items
 import time
 
 import smutty.scraper.pipelines
 
 from smutty.statefiles import IntegerStateFile
+from smutty.scraper.items import SmuttyImage, SmuttyVideo
 
 
 class SmuttySpider(scrapy.Spider):
@@ -132,7 +132,7 @@ class SmuttySpider(scrapy.Spider):
             # finalize item
             if image is None:
                 video = content.xpath(".//video")
-                yield smutty.items.SmuttyVideo(
+                yield SmuttyVideo(
                     # SmuttyItem
                     item_id=item_id,
                     submitter=submitter,
@@ -145,7 +145,7 @@ class SmuttySpider(scrapy.Spider):
                     video_mime=video.xpath("./source/@type").extract_first()
                 )
             else:
-                yield smutty.items.SmuttyImage(
+                yield SmuttyImage(
                     # SmuttyItem
                     item_id=item_id,
                     submitter=submitter,
