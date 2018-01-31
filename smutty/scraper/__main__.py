@@ -51,7 +51,7 @@ class App:
             self._highest_id_state = IntegerStateFile(self._config['state_files']['highest_id'])
             self._lowest_id_state = IntegerStateFile(self._config['state_files']['lowest_id'])
             self._database_url = sqlalchemy.engine.url.URL(
-                drivername=self._config['database']['drivername'],
+                drivername=self._config['database']['dialect'],
                 host=self._config['database']['host'],
                 port=self._config['database']['port'],
                 username=self._config['database']['username'],
