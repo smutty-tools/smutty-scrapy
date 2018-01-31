@@ -15,7 +15,7 @@ import smutty.scraper.settings
 
 from smutty.scraper.spiders import SmuttySpider
 from smutty.exceptions import SmuttyException
-from smutty.statefiles import IntegerStateFile
+from smutty.filetools import IntegerStateFile
 
 
 class App:

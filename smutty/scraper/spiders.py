@@ -4,9 +4,7 @@ import pytz
 import scrapy
 import time
 
-import smutty.scraper.pipelines
-
-from smutty.statefiles import IntegerStateFile
+from smutty.filetools import IntegerStateFile
 from smutty.scraper.items import SmuttyImage, SmuttyVideo
 
 
