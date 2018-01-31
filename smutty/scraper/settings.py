@@ -11,8 +11,8 @@
 
 BOT_NAME = 'smutty'
 
-SPIDER_MODULES = ['smutty.spiders']
-NEWSPIDER_MODULE = 'smutty.spiders'
+SPIDER_MODULES = ['smutty.scraper.spiders']
+NEWSPIDER_MODULE = 'smutty.scraper.spiders'
 
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
@@ -62,7 +62,7 @@ DOWNLOAD_DELAY=3
 # Configure item pipelines
 # See http://scrapy.readthedocs.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-    'smutty.pipelines.SmuttyDatabasePipeline': 300,
+    'smutty.scraper.pipelines.SmuttyDatabasePipeline': 300,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)

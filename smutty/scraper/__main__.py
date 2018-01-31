@@ -11,10 +11,11 @@ import scrapy.crawler
 import scrapy.utils.project
 import sqlalchemy.engine.url
 
-import smutty.settings
-import smutty.pipelines
+import smutty.scraper.settings
 
-from smutty.spiders.smutty_spider import SmuttySpiderSpider
+from smutty.scraper.spiders import SmuttySpider
+from smutty.exceptions import SmuttyException
+from smutty.statefiles import IntegerStateFile
 
 
 class App:
@@ -42,13 +43,13 @@ class App:
             with open(args.config) as config_fileobj:
                 self._config.read_file(config_fileobj, source=args.config)
         except FileNotFoundError as exception:
-            raise smutty.SmuttyException("Could not find file: {0}".format(exception))
+            raise SmuttyException("Could not find file: {0}".format(exception))
 
         # process configuration
         try:
-            self._current_page_state = smutty.IntegerStateFile(self._config['state_files']['current_page'])
-            self._highest_id_state = smutty.IntegerStateFile(self._config['state_files']['highest_id'])
-            self._lowest_id_state = smutty.IntegerStateFile(self._config['state_files']['lowest_id'])
+            self._current_page_state = IntegerStateFile(self._config['state_files']['current_page'])
+            self._highest_id_state = IntegerStateFile(self._config['state_files']['highest_id'])
+            self._lowest_id_state = IntegerStateFile(self._config['state_files']['lowest_id'])
             self._database_url = sqlalchemy.engine.url.URL(
                 drivername=self._config['database']['drivername'],
                 host=self._config['database']['host'],
@@ -58,7 +59,7 @@ class App:
                 database=self._config['database']['database']
                 )
         except KeyError as exception:
-            raise smutty.SmuttyException("Problem while reading configuration: {0}".format(exception))
+            raise SmuttyException("Problem while reading configuration: {0}".format(exception))
 
         # manage start page :
         # - start based on state file
@@ -83,21 +84,21 @@ class App:
 
         # manage settings
         self._settings = scrapy.utils.project.get_project_settings()
-        self._settings.setmodule(smutty.settings)
+        self._settings.setmodule(smutty.scraper.settings)
 
         self._settings.set("SMUTTY_PAGE_COUNT", args.page_count)
         self._settings.set("SMUTTY_BLACKLIST_TAG_FILE", args.blacklist_tag_file)
         self._settings.set("SMUTTY_DATABASE_CONFIGURATION_URL", self._database_url)
-        self._settings.set("SMUTTY_STATE_CURRENT_PAGE", self._current_page_state)
-        self._settings.set("SMUTTY_STATE_HIGHEST_ID", self._highest_id_state)
-        self._settings.set("SMUTTY_STATE_LOWEST_ID", self._lowest_id_state)
+        self._settings.set("SMUTTY_STATE_FILE_CURRENT_PAGE", self._config['state_files']['current_page'])
+        self._settings.set("SMUTTY_STATE_FILE_HIGHEST_ID", self._config['state_files']['highest_id'])
+        self._settings.set("SMUTTY_STATE_FILE_LOWEST_ID", self._config['state_files']['lowest_id'])
 
     def run(self):
         """
         foo
         """
         process = scrapy.crawler.CrawlerProcess(self._settings)
-        process.crawl(SmuttySpiderSpider)
+        process.crawl(SmuttySpider)
         process.start()  # it blocks here until finished
 
 
@@ -108,7 +109,7 @@ def main():
     try:
         app = App()
         app.run()
-    except smutty.SmuttyException as exception:
+    except SmuttyException as exception:
         logging.error("%s", exception)
     except Exception as exception:
         logging.critical("%s: %s", exception.__class__.__name__, exception)

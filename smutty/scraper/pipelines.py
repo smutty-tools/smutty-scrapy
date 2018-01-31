@@ -1,6 +1,5 @@
 import sqlalchemy.orm
 import sqlalchemy.ext.declarative
-import scrapy.exceptions
 
 from smutty.models import Tag, Item, Image, Video, create_all_tables
 from smutty.items import SmuttyImage, SmuttyVideo

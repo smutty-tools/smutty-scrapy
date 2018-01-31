@@ -5,8 +5,12 @@ import scrapy
 import smutty.items
 import time
 
+import smutty.scraper.pipelines
 
-class SmuttySpiderSpider(scrapy.Spider):
+from smutty.statefiles import IntegerStateFile
+
+
+class SmuttySpider(scrapy.Spider):
 
     name = "smutty_spider"
     allowed_domains = ["m.smutty.com"]
@@ -16,9 +20,9 @@ class SmuttySpiderSpider(scrapy.Spider):
 
     @classmethod
     def from_crawler(cls, crawler):
-        return cls(crawler.settings.get("SMUTTY_STATE_CURRENT_PAGE"),
-                   crawler.settings.get("SMUTTY_STATE_HIGHEST_ID"),
-                   crawler.settings.get("SMUTTY_STATE_LOWEST_ID"),
+        return cls(crawler.settings.get("SMUTTY_STATE_FILE_CURRENT_PAGE"),
+                   crawler.settings.get("SMUTTY_STATE_FILE_HIGHEST_ID"),
+                   crawler.settings.get("SMUTTY_STATE_FILE_LOWEST_ID"),
                    crawler.settings.get("SMUTTY_PAGE_COUNT"),
                    crawler.settings.get("SMUTTY_BLACKLIST_TAG_FILE"))
 
@@ -29,12 +33,12 @@ class SmuttySpiderSpider(scrapy.Spider):
         with open(blacklist_tag_file) as file_obj:
             cls._tag_blacklist = set(map(str.lower, file_obj.read().split()))
 
-    def __init__(self, current_page_state, highest_id_state, lowest_id_state, page_count, blacklist_tag_file):
+    def __init__(self, current_page_state_file, highest_id_state_file, lowest_id_state_file, page_count, blacklist_tag_file):
         # init
-        self._current_page_state = current_page_state
-        self._highest_id_state = highest_id_state
+        self._current_page_state = IntegerStateFile(current_page_state_file, self.logger)
+        self._highest_id_state = IntegerStateFile(highest_id_state_file, self.logger)
+        self._lowest_id_state = IntegerStateFile(lowest_id_state_file, self.logger)
         self._highest_id = self._highest_id_state.get()
-        self._lowest_id_state = lowest_id_state
         self._lowest_id = self._lowest_id_state.get()
         self.logger.info("State: highest_id={0} lowest_id={1} current_page={2}".format(self._highest_id, self._lowest_id, self._current_page_state.get()))
         self.load_blacklist_tag(blacklist_tag_file)
