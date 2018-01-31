@@ -14,6 +14,7 @@ class SmuttyDatabasePipeline:
 
     def __init__(self, database_configuration_url):
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.debug("Using database url: %s", database_configuration_url)
         engine = sqlalchemy.create_engine(database_configuration_url)
         create_all_tables(engine)
         self.Session = sqlalchemy.orm.sessionmaker(bind=engine)
