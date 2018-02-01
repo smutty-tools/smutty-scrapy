@@ -2,7 +2,6 @@
 foo
 """
 import argparse
-import configparser
 import logging
 import sys
 
@@ -12,8 +11,8 @@ import scrapy.utils.project
 
 import smutty.scraper.settings
 
-from smutty import DEFAULT_CONFIG_FILE
 from smutty.db import DatabaseConfiguration
+from smutty.config import ConfigurationFile
 from smutty.exceptions import SmuttyException
 from smutty.filetools import IntegerStateFile
 from smutty.scraper.spiders import SmuttySpider
@@ -31,7 +30,7 @@ class App:
         parser.add_argument("-c", "--page-count", metavar="PAGE_COUNT", type=int)
         parser.add_argument("-m", "--min-id", metavar="MIN_ID", type=int)
         parser.add_argument("-b", "--blacklist-tag-file", metavar="BLACKLIST_FILE", type=str)
-        parser.add_argument("config", metavar="CONFIG", type=str, nargs='?', default=DEFAULT_CONFIG_FILE)
+        parser.add_argument("config", metavar="CONFIG", type=str, nargs='?', default=ConfigurationFile.DEFAULT_CONFIG_FILE)
         args = parser.parse_args()
 
         # exit early if nothing will be done
@@ -39,21 +38,13 @@ class App:
             sys.exit(0)
 
         # load configuration
-        self._config = configparser.ConfigParser()
-        try:
-            with open(args.config) as config_fileobj:
-                self._config.read_file(config_fileobj, source=args.config)
-        except FileNotFoundError as exception:
-            raise SmuttyException("Could not find file: {0}".format(exception))
+        self._config = ConfigurationFile(args.config)
 
         # process configuration
-        try:
-            self._current_page_state = IntegerStateFile(self._config['state_files']['current_page'])
-            self._highest_id_state = IntegerStateFile(self._config['state_files']['highest_id'])
-            self._lowest_id_state = IntegerStateFile(self._config['state_files']['lowest_id'])
-            self._database_url = DatabaseConfiguration(self._config['database']).url
-        except KeyError as exception:
-            raise SmuttyException("Problem while reading configuration: {0}".format(exception))
+        self._current_page_state = IntegerStateFile(self._config.get('state_files', 'current_page'))
+        self._highest_id_state = IntegerStateFile(self._config.get('state_files', 'highest_id'))
+        self._lowest_id_state = IntegerStateFile(self._config.get('state_files', 'lowest_id'))
+        self._database_url = DatabaseConfiguration(self._config.get('database')).url
 
         # manage start page :
         # - start based on state file
@@ -83,9 +74,9 @@ class App:
         self._settings.set("SMUTTY_PAGE_COUNT", args.page_count)
         self._settings.set("SMUTTY_BLACKLIST_TAG_FILE", args.blacklist_tag_file)
         self._settings.set("SMUTTY_DATABASE_CONFIGURATION_URL", self._database_url)
-        self._settings.set("SMUTTY_STATE_FILE_CURRENT_PAGE", self._config['state_files']['current_page'])
-        self._settings.set("SMUTTY_STATE_FILE_HIGHEST_ID", self._config['state_files']['highest_id'])
-        self._settings.set("SMUTTY_STATE_FILE_LOWEST_ID", self._config['state_files']['lowest_id'])
+        self._settings.set("SMUTTY_STATE_FILE_CURRENT_PAGE", self._config.get('state_files', 'current_page'))
+        self._settings.set("SMUTTY_STATE_FILE_HIGHEST_ID", self._config.get('state_files', 'highest_id'))
+        self._settings.set("SMUTTY_STATE_FILE_LOWEST_ID", self._config.get('state_files', 'lowest_id'))
 
     def run(self):
         """
