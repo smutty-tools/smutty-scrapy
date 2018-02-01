@@ -13,9 +13,10 @@ import sqlalchemy.engine.url
 
 import smutty.scraper.settings
 
-from smutty.scraper.spiders import SmuttySpider
+from smutty.db import DatabaseConfiguration
 from smutty.exceptions import SmuttyException
 from smutty.filetools import IntegerStateFile
+from smutty.scraper.spiders import SmuttySpider
 
 
 class App:
@@ -50,14 +51,7 @@ class App:
             self._current_page_state = IntegerStateFile(self._config['state_files']['current_page'])
             self._highest_id_state = IntegerStateFile(self._config['state_files']['highest_id'])
             self._lowest_id_state = IntegerStateFile(self._config['state_files']['lowest_id'])
-            self._database_url = sqlalchemy.engine.url.URL(
-                drivername=self._config['database']['dialect'],
-                host=self._config['database']['host'],
-                port=self._config['database']['port'],
-                username=self._config['database']['username'],
-                password=self._config['database']['password'],
-                database=self._config['database']['database']
-                )
+            self._database_url = DatabaseConfiguration(self._config['database']).url
         except KeyError as exception:
             raise SmuttyException("Problem while reading configuration: {0}".format(exception))
 

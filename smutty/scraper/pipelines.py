@@ -1,7 +1,6 @@
 import logging
-import sqlalchemy.orm
-import sqlalchemy.ext.declarative
 
+from smutty.db import DatabaseSession
 from smutty.models import Tag, Item, Image, Video, create_all_tables
 from smutty.scraper.items import SmuttyImage, SmuttyVideo
 
@@ -15,9 +14,9 @@ class SmuttyDatabasePipeline:
     def __init__(self, database_configuration_url):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.debug("Using database url: %s", database_configuration_url)
-        engine = sqlalchemy.create_engine(database_configuration_url)
-        create_all_tables(engine)
-        self.Session = sqlalchemy.orm.sessionmaker(bind=engine)
+        self._database = DatabaseSession(database_configuration_url)
+        # initialize tables if they do not exist
+        create_all_tables(self._database.engine)
 
     def get_tags(self, session, tags):
         # fetch existing tags
@@ -63,7 +62,7 @@ class SmuttyDatabasePipeline:
 
     def process_item(self, item, spider):
         # create session
-        session = self.Session()
+        session = self._database.session
 
         # item already exists
         item_id = item["item_id"]
