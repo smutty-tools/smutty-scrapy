@@ -41,9 +41,9 @@ class App:
         self._config = ConfigurationFile(args.config)
 
         # process configuration
-        self._current_page_state = IntegerStateFile(self._config.get('state_files', 'current_page'))
-        self._highest_id_state = IntegerStateFile(self._config.get('state_files', 'highest_id'))
-        self._lowest_id_state = IntegerStateFile(self._config.get('state_files', 'lowest_id'))
+        self._current_page_state = IntegerStateFile(self._config.get('scraper', 'current_page'))
+        self._highest_id_state = IntegerStateFile(self._config.get('scraper', 'highest_id'))
+        self._lowest_id_state = IntegerStateFile(self._config.get('scraper', 'lowest_id'))
         self._database_url = DatabaseConfiguration(self._config.get('database')).url
 
         # manage start page :
@@ -83,9 +83,9 @@ class App:
         self._settings.set("SMUTTY_PAGE_COUNT", args.page_count)
         self._settings.set("SMUTTY_BLACKLIST_TAGS", blacklisted_tags)
         self._settings.set("SMUTTY_DATABASE_CONFIGURATION_URL", self._database_url)
-        self._settings.set("SMUTTY_STATE_FILE_CURRENT_PAGE", self._config.get('state_files', 'current_page'))
-        self._settings.set("SMUTTY_STATE_FILE_HIGHEST_ID", self._config.get('state_files', 'highest_id'))
-        self._settings.set("SMUTTY_STATE_FILE_LOWEST_ID", self._config.get('state_files', 'lowest_id'))
+        self._settings.set("SMUTTY_STATE_FILE_CURRENT_PAGE", self._current_page_state.file_name)
+        self._settings.set("SMUTTY_STATE_FILE_HIGHEST_ID", self._highest_id_state.file_name)
+        self._settings.set("SMUTTY_STATE_FILE_LOWEST_ID", self._lowest_id_state.file_name)
 
     def run(self):
         """
