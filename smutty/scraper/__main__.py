@@ -67,12 +67,21 @@ class App:
         if min_id is not None:
             self._lowest_id_state.set(min_id)
 
+        # load blacklist tags
+        blacklisted_tags = set()
+        if args.blacklist_tag_file:
+            try:
+                with open(args.blacklist_tag_file) as file_obj:
+                    blacklisted_tags = {tag.lower() for line in file_obj for tag in line.split()}
+            except FileNotFoundError as exc:
+                raise SmuttyException(exc)
+
         # manage settings
         self._settings = scrapy.utils.project.get_project_settings()
         self._settings.setmodule(smutty.scraper.settings)
 
         self._settings.set("SMUTTY_PAGE_COUNT", args.page_count)
-        self._settings.set("SMUTTY_BLACKLIST_TAG_FILE", args.blacklist_tag_file)
+        self._settings.set("SMUTTY_BLACKLIST_TAGS", blacklisted_tags)
         self._settings.set("SMUTTY_DATABASE_CONFIGURATION_URL", self._database_url)
         self._settings.set("SMUTTY_STATE_FILE_CURRENT_PAGE", self._config.get('state_files', 'current_page'))
         self._settings.set("SMUTTY_STATE_FILE_HIGHEST_ID", self._config.get('state_files', 'highest_id'))

@@ -22,16 +22,9 @@ class SmuttySpider(scrapy.Spider):
                    crawler.settings.get("SMUTTY_STATE_FILE_HIGHEST_ID"),
                    crawler.settings.get("SMUTTY_STATE_FILE_LOWEST_ID"),
                    crawler.settings.get("SMUTTY_PAGE_COUNT"),
-                   crawler.settings.get("SMUTTY_BLACKLIST_TAG_FILE"))
+                   crawler.settings.get("SMUTTY_BLACKLIST_TAGS"))
 
-    @classmethod
-    def load_blacklist_tag(cls, blacklist_tag_file):
-        if not blacklist_tag_file:
-            return
-        with open(blacklist_tag_file) as file_obj:
-            cls._tag_blacklist = set(map(str.lower, file_obj.read().split()))
-
-    def __init__(self, current_page_state_file, highest_id_state_file, lowest_id_state_file, page_count, blacklist_tag_file):
+    def __init__(self, current_page_state_file, highest_id_state_file, lowest_id_state_file, page_count, blacklist_tags):
         # init
         self._current_page_state = IntegerStateFile(current_page_state_file, self.logger)
         self._highest_id_state = IntegerStateFile(highest_id_state_file, self.logger)
@@ -39,7 +32,8 @@ class SmuttySpider(scrapy.Spider):
         self._highest_id = self._highest_id_state.get()
         self._lowest_id = self._lowest_id_state.get()
         self.logger.info("State: highest_id={0} lowest_id={1} current_page={2}".format(self._highest_id, self._lowest_id, self._current_page_state.get()))
-        self.load_blacklist_tag(blacklist_tag_file)
+        self._tag_blacklist = blacklist_tags
+        self.logger.info("Blacklisted tags: {0}".format(self._tag_blacklist))
         # limit
         self._end_page = None
         if page_count:
@@ -97,14 +91,16 @@ class SmuttySpider(scrapy.Spider):
 
         # handle content
         for block in divs:
+            # id
+            item_id = int(block.xpath(".//a/@onclick").re_first("^App\.txtr\((\d+)\)"))
+
             # tags
             tags = set(map(str.lower, block.xpath(
                 ".//a/@href").re("^/h/(.*)/")))
             # skip unwanted items
             if tags is not None and tags & self._tag_blacklist:
+                self.logger.info("Ignoring item id {0} due to blacklisted tag".format(item_id))
                 continue
-            # id
-            item_id = int(block.xpath(".//a/@onclick").re_first("^App\.txtr\((\d+)\)"))
 
             # set highest id if not already set
             if self._highest_id is None:
