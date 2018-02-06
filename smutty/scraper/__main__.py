@@ -29,8 +29,8 @@ class App:
         parser.add_argument("-s", "--start-page", metavar="START_PAGE", type=int)
         parser.add_argument("-c", "--page-count", metavar="PAGE_COUNT", type=int)
         parser.add_argument("-m", "--min-id", metavar="MIN_ID", type=int)
-        parser.add_argument("-b", "--blacklist-tag-file", metavar="BLACKLIST_FILE", type=str)
-        parser.add_argument("config", metavar="CONFIG", type=str, nargs='?', default=ConfigurationFile.DEFAULT_CONFIG_FILE)
+        parser.add_argument("-b", "--blacklist-tag-file", metavar="BLACKLIST_FILE")
+        parser.add_argument("config", metavar="CONFIG", nargs='?', default=ConfigurationFile.DEFAULT_CONFIG_FILE)
         args = parser.parse_args()
 
         # exit early if nothing will be done
