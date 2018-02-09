@@ -41,31 +41,31 @@ class App:
         self._config = ConfigurationFile(args.config)
 
         # process configuration
-        self._current_page_state = IntegerStateFile(self._config.get('scraper', 'current_page'))
-        self._highest_id_state = IntegerStateFile(self._config.get('scraper', 'highest_id'))
-        self._lowest_id_state = IntegerStateFile(self._config.get('scraper', 'lowest_id'))
+        self._current_scraper_page_state = IntegerStateFile(self._config.get('scraper', 'current_scraper_page'))
+        self._highest_scraper_id_state = IntegerStateFile(self._config.get('scraper', 'highest_scraper_id'))
+        self._lowest_scraper_id_state = IntegerStateFile(self._config.get('scraper', 'lowest_scraper_id'))
         self._database_url = DatabaseConfiguration(self._config.get('database')).url
 
         # manage start page :
         # - start based on state file
         # - override if necessary
         # - persist to make sure it exists
-        current_page = self._current_page_state.get()
+        current_scraper_page = self._current_scraper_page_state.get()
         if args.start_page is not None:
-            current_page = args.start_page
-        if current_page is None or current_page == 0:
-            current_page = 1
-        self._current_page_state.set(current_page)
+            current_scraper_page = args.start_page
+        if current_scraper_page is None or current_scraper_page == 0:
+            current_scraper_page = 1
+        self._current_scraper_page_state.set(current_scraper_page)
 
         # manage min id
         # - start based on state file
         # - override if necessary
         # - if defined, make sure state file exists
-        min_id = self._lowest_id_state.get()
+        min_id = self._lowest_scraper_id_state.get()
         if args.min_id is not None:
             min_id = args.min_id
         if min_id is not None:
-            self._lowest_id_state.set(min_id)
+            self._lowest_scraper_id_state.set(min_id)
 
         # load blacklist tags
         blacklisted_tags = set()
@@ -83,9 +83,9 @@ class App:
         self._settings.set("SMUTTY_PAGE_COUNT", args.page_count)
         self._settings.set("SMUTTY_BLACKLIST_TAGS", blacklisted_tags)
         self._settings.set("SMUTTY_DATABASE_CONFIGURATION_URL", self._database_url)
-        self._settings.set("SMUTTY_STATE_FILE_CURRENT_PAGE", self._current_page_state.file_name)
-        self._settings.set("SMUTTY_STATE_FILE_HIGHEST_ID", self._highest_id_state.file_name)
-        self._settings.set("SMUTTY_STATE_FILE_LOWEST_ID", self._lowest_id_state.file_name)
+        self._settings.set("SMUTTY_STATE_FILE_CURRENT_SCRAPER_PAGE", self._current_scraper_page_state.file_name)
+        self._settings.set("SMUTTY_STATE_FILE_HIGHEST_SCRAPER_ID", self._highest_scraper_id_state.file_name)
+        self._settings.set("SMUTTY_STATE_FILE_LOWEST_SCRAPER_ID", self._lowest_scraper_id_state.file_name)
 
     def run(self):
         """

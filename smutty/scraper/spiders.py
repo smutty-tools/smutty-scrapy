@@ -18,26 +18,27 @@ class SmuttySpider(scrapy.Spider):
 
     @classmethod
     def from_crawler(cls, crawler):
-        return cls(crawler.settings.get("SMUTTY_STATE_FILE_CURRENT_PAGE"),
-                   crawler.settings.get("SMUTTY_STATE_FILE_HIGHEST_ID"),
-                   crawler.settings.get("SMUTTY_STATE_FILE_LOWEST_ID"),
+        return cls(crawler.settings.get("SMUTTY_STATE_FILE_CURRENT_SCRAPER_PAGE"),
+                   crawler.settings.get("SMUTTY_STATE_FILE_HIGHEST_SCRAPER_ID"),
+                   crawler.settings.get("SMUTTY_STATE_FILE_LOWEST_SCRAPER_ID"),
                    crawler.settings.get("SMUTTY_PAGE_COUNT"),
                    crawler.settings.get("SMUTTY_BLACKLIST_TAGS"))
 
-    def __init__(self, current_page_state_file, highest_id_state_file, lowest_id_state_file, page_count, blacklist_tags):
+    def __init__(self, current_scraper_page_state_file, highest_scraper_id_state_file, lowest_scraper_id_state_file, page_count, blacklist_tags):
         # init
-        self._current_page_state = IntegerStateFile(current_page_state_file, self.logger)
-        self._highest_id_state = IntegerStateFile(highest_id_state_file, self.logger)
-        self._lowest_id_state = IntegerStateFile(lowest_id_state_file, self.logger)
-        self._highest_id = self._highest_id_state.get()
-        self._lowest_id = self._lowest_id_state.get()
-        self.logger.info("State: highest_id={0} lowest_id={1} current_page={2}".format(self._highest_id, self._lowest_id, self._current_page_state.get()))
+        self._current_scraper_page_state = IntegerStateFile(current_scraper_page_state_file, self.logger)
+        self._highest_scraper_id_state = IntegerStateFile(highest_scraper_id_state_file, self.logger)
+        self._lowest_scraper_id_state = IntegerStateFile(lowest_scraper_id_state_file, self.logger)
+        self._highest_scraper_id = self._highest_scraper_id_state.get()
+        self._lowest_scraper_id = self._lowest_scraper_id_state.get()
+        current_page = self._current_scraper_page_state.get()
+        self.logger.info("State: highest_scraper_id={0} lowest_scraper_id={1} current_scraper_page={2}".format(self._highest_scraper_id, self._lowest_scraper_id, current_page))
         self._tag_blacklist = blacklist_tags
         self.logger.info("Blacklisted tags: {0}".format(self._tag_blacklist))
         # limit
         self._end_page = None
         if page_count:
-            self._end_page = self._current_page_state.get() + page_count
+            self._end_page = current_page + page_count
 
     def get_page_url(self, page_number):
         return self._page_url.format(page_number)
@@ -50,36 +51,36 @@ class SmuttySpider(scrapy.Spider):
                               meta=meta)
 
     def start_requests(self):
-        yield self._request_page(self._current_page_state.get())
+        yield self._request_page(self._current_scraper_page_state.get())
 
     def finalize_run(self):
         self.logger.info("Finalizing states")
 
         # trace before
-        high = self._highest_id_state.get()
-        low = self._lowest_id_state.get()
-        cur_page = self._current_page_state.get()
-        self.logger.info("Before: highest_id={0} lowest_id={1} current_page={2}".format(high, low, cur_page))
+        high = self._highest_scraper_id_state.get()
+        low = self._lowest_scraper_id_state.get()
+        cur_page = self._current_scraper_page_state.get()
+        self.logger.info("Before: highest_scraper_id={0} lowest_scraper_id={1} current_scraper_page={2}".format(high, low, cur_page))
 
         # we memorize highest seen id as new lowest id, for next run
-        self._lowest_id_state.set(self._highest_id)
+        self._lowest_scraper_id_state.set(self._highest_scraper_id)
 
         # we clean up for a new "from newest" run
         with contextlib.suppress(FileNotFoundError):
-            self._highest_id_state.delete()    # we forget highest id
-            self._current_page_state.delete()  # run will restart from first page
+            self._highest_scraper_id_state.delete()    # we forget highest id
+            self._current_scraper_page_state.delete()  # run will restart from first page
 
         # trace after
-        high = self._highest_id_state.get()
-        low = self._lowest_id_state.get()
-        cur_page = self._current_page_state.get()
-        self.logger.info("After: highest_id={0} lowest_id={1} current_page={2}".format(high, low, cur_page))
+        high = self._highest_scraper_id_state.get()
+        low = self._lowest_scraper_id_state.get()
+        cur_page = self._current_scraper_page_state.get()
+        self.logger.info("After: highest_scraper_id={0} lowest_scraper_id={1} current_scraper_page={2}".format(high, low, cur_page))
 
     def parse(self, response):
         self.logger.info("Parsing page {0}".format(response.meta["page_number"]))
 
         # save progression
-        self._current_page_state.set(response.meta["page_number"])
+        self._current_scraper_page_state.set(response.meta["page_number"])
 
         # find content
         divs = response.css("#container_chart").xpath("./div[@id]")
@@ -103,14 +104,14 @@ class SmuttySpider(scrapy.Spider):
                 continue
 
             # set highest id if not already set
-            if self._highest_id is None:
+            if self._highest_scraper_id is None:
                 self.logger.info("Memorizing {0} as highest id".format(item_id))
-                self._highest_id = item_id
-                self._highest_id_state.set(item_id)
+                self._highest_scraper_id = item_id
+                self._highest_scraper_id_state.set(item_id)
 
             # check for minimum bound
-            if self._lowest_id and item_id <= self._lowest_id:
-                self.logger.info("Reached id {0} which is below lowest id {1} as highest id".format(item_id, self._lowest_id))
+            if self._lowest_scraper_id and item_id <= self._lowest_scraper_id:
+                self.logger.info("Reached id {0} which is below lowest id {1} as highest id".format(item_id, self._lowest_scraper_id))
                 self.finalize_run()
                 return
 
