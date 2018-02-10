@@ -93,7 +93,6 @@ class App:
 
     def __init__(self):
         logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
-        self.logger = logging.getLogger('exporter')
 
         # analyze commande line arguments
         parser = argparse.ArgumentParser(description="Smutty metadata exporter")
@@ -118,7 +117,7 @@ class App:
         # exporter limits
         self._exporter_max_id = args.max_id or self._highest_exporter_id_state.get()
         self._exporter_min_id = args.min_id or self._lowest_exporter_id_state.get()
-        self.logger.info("Exporter current state limits : min_id={0} max_id={1}".format(self._exporter_min_id, self._exporter_max_id))
+        logging.info("Exporter current state limits : min_id={0} max_id={1}".format(self._exporter_min_id, self._exporter_max_id))
         if bool(self._exporter_min_id) ^ bool(self._exporter_max_id):
             raise SmuttyException("Either both exporter limits (or none !) should be specified")
         if self._exporter_min_id and self._exporter_max_id and self._exporter_min_id > self._exporter_max_id:
@@ -126,16 +125,16 @@ class App:
 
         # scraper limits
         self._lowest_scraper_id = self._lowest_scraper_id_state.get()
-        self.logger.info("Scraper current finished limit : min_id={0}".format(self._lowest_scraper_id))
+        logging.info("Scraper current finished limit : min_id={0}".format(self._lowest_scraper_id))
         if self._lowest_scraper_id is None:
-            self.logger.info("Nothing scrap was finished, nothing to do: exiting")
+            logging.info("Nothing scrap was finished, nothing to do: exiting")
             sys.exit(0)
 
         # database limits
         database_min_id, database_max_id = self.get_database_min_max_id()
-        self.logger.info("Database current state limits : min_id={0} max_id={1}".format(database_min_id, database_max_id))
+        logging.info("Database current state limits : min_id={0} max_id={1}".format(database_min_id, database_max_id))
         if database_min_id is None or database_max_id is None or database_min_id == database_max_id:
-            self.logger.info("Nothing in database, nothing to do: exiting")
+            logging.info("Nothing in database, nothing to do: exiting")
             sys.exit(0)
 
         # cross validations
@@ -149,7 +148,7 @@ class App:
 
         # export everything and return if nothing was exported so far
         if self._exporter_min_id is None or self._exporter_max_id is None:
-            self.logger.info("No exporter state available, exporting everything scraper produced")
+            logging.info("No exporter state available, exporting everything scraper produced")
             whole_range = Interval(database_min_id, database_max_id)
             self._intervals.append(whole_range)
             return
@@ -161,13 +160,13 @@ class App:
         if database_min_id < self._exporter_min_id:
             lower_range = Interval(database_min_id, self._exporter_min_id)
             self._intervals.append(lower_range)
-            self.logger.info("Queuing lower range expansion {0}".format(lower_range))
+            logging.info("Queuing lower range expansion {0}".format(lower_range))
 
         # high boundary expansion (exported vs scraped)
         if self._exporter_max_id < self._lowest_scraper_id:
             higher_range = Interval(self._exporter_max_id, self._lowest_scraper_id)
             self._intervals.append(higher_range)
-            self.logger.info("Queuing higher range expansion {0}".format(higher_range))
+            logging.info("Queuing higher range expansion {0}".format(higher_range))
 
     def get_database_min_max_id(self):
         result = self._database.session.query(
@@ -178,7 +177,7 @@ class App:
 
     def run(self):
         for interval in self._intervals:
-            self.logger.info("Exporting {0}".format(interval))
+            logging.info("Exporting {0}".format(interval))
             for block in Block.blocks_covering_interval(interval):
                 self._exporter.export(self._database.session, ImagePackage(block))
                 self._exporter.export(self._database.session, VideoPackage(block))
