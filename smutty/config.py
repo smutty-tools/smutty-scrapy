@@ -25,3 +25,6 @@ class ConfigurationFile:
                 return {**self._config[section]}
         except KeyError as exception:
             raise SmuttyException("Problem while reading key {1} for section {2} in configuration file {3} : {0}".format(exception, key, section, self._file_name))
+
+    def get_boolean(self, section, key):
+        return self._config.getboolean(section, key)
