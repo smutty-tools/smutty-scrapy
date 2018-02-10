@@ -4,17 +4,92 @@ import sys
 
 import sqlalchemy
 
+from path import Path
+
 from smutty.db import DatabaseConfiguration, DatabaseSession
 from smutty.config import ConfigurationFile
 from smutty.exceptions import SmuttyException
 from smutty.filetools import IntegerStateFile
-from smutty.models import Item, create_all_tables
+from smutty.models import Item, Image, Video, create_all_tables
+
+
+class Interval:
+
+    def __init__(self, min_id, max_id):
+        assert min_id <= max_id
+        self.min_id = min_id
+        self.max_id = max_id
+
+    def __repr__(self):
+        return "{0}({min_id}, {max_id})".format(self.__class__.__name__, **self.__dict__)
+
+
+class Block(Interval):
+
+    SIZE = 10000
+
+    def __init__(self, min_id, max_id):
+        super().__init__(min_id, max_id)
+
+    @classmethod
+    def blocks_covering_interval(cls, interval):
+        assert cls.SIZE > 0
+        lowest_id = interval.min_id - interval.min_id % cls.SIZE
+        highest_id = interval.max_id - interval.max_id % cls.SIZE
+        for base in range(lowest_id, highest_id + 1, cls.SIZE):
+            yield Block(base, base + cls.SIZE - 1)
+
+    def items(self, db_session, item_class):
+        # query is sorted so that exporter output is stable
+        return db_session.query(item_class).filter(
+                self.min_id <= item_class.item_id,
+                item_class.item_id <= self.max_id
+            ).order_by(item_class.item_id)
+
+
+class Package:
+
+    def __init__(self, block, item_class):
+        self._block = block
+        self._item_class = item_class
+
+    def __repr__(self):
+        return "{0}({_block}, {_item_class.__name__})".format(self.__class__.__name__, **self.__dict__)
+
+    def db_items(self, db_session):
+        return self._block.items(db_session, self._item_class)
+
+
+class ImagePackage(Package):
+
+    def __init__(self, block):
+        super().__init__(block, Image)
+
+
+class VideoPackage(Package):
+
+    def __init__(self, block):
+        super().__init__(block, Video)
+
+
+class Exporter:
+
+    def __init__(self, destination_directory):
+        self._destination_directory = Path(destination_directory).expand().abspath()
+        logging.info("Output directory is {0}".format(self._destination_directory))
+
+    def __repr__(self):
+        return "{0}({_destination_directory}, {with_tags})".format(self.__class__.__name__, **self.__dict__)
+
+    def export(self, db_session, package):
+        logging.info("Exporting package {0}".format(package))
+        for item in package.db_items(db_session):
+            item = item.export_dict()
+            # tags are sorted so that exporter output is stable
+            item['tags'].sort()
 
 
 class App:
-    """
-    foo
-    """
 
     def __init__(self):
         logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
@@ -33,6 +108,7 @@ class App:
         self._highest_exporter_id_state = IntegerStateFile(self._config.get('exporter', 'highest_exporter_id'))
         self._lowest_exporter_id_state = IntegerStateFile(self._config.get('exporter', 'lowest_exporter_id'))
         self._lowest_scraper_id_state = IntegerStateFile(self._config.get('scraper', 'lowest_scraper_id'))
+        self._exporter = Exporter(self._config.get('exporter', 'output_directory'))
         database_url = DatabaseConfiguration(self._config.get('database')).url
 
         # prepare database
@@ -68,14 +144,14 @@ class App:
         if self._exporter_max_id and self._exporter_max_id > self._lowest_scraper_id:
             raise SmuttyException("Exporter high limit cannot be higher than scraper lower bound")
 
-        # segments to process
-        self._segments = []
+        # intervalss to process
+        self._intervals = []
 
         # export everything and return if nothing was exported so far
         if self._exporter_min_id is None or self._exporter_max_id is None:
             self.logger.info("No exporter state available, exporting everything scraper produced")
-            whole_range = (database_min_id, database_max_id)
-            self._segments.append(whole_range)
+            whole_range = Interval(database_min_id, database_max_id)
+            self._intervals.append(whole_range)
             return
 
         # here the situation is expected to be
@@ -83,14 +159,14 @@ class App:
 
         # low boundary expansion (exported vs db)
         if database_min_id < self._exporter_min_id:
-            lower_range = (database_min_id, self._exporter_min_id)
-            self._segments.append(lower_range)
+            lower_range = Interval(database_min_id, self._exporter_min_id)
+            self._intervals.append(lower_range)
             self.logger.info("Queuing lower range expansion {0}".format(lower_range))
 
         # high boundary expansion (exported vs scraped)
         if self._exporter_max_id < self._lowest_scraper_id:
-            higher_range = (self._exporter_max_id, self._lowest_scraper_id)
-            self._segments.append(higher_range)
+            higher_range = Interval(self._exporter_max_id, self._lowest_scraper_id)
+            self._intervals.append(higher_range)
             self.logger.info("Queuing higher range expansion {0}".format(higher_range))
 
     def get_database_min_max_id(self):
@@ -100,15 +176,12 @@ class App:
         ).one()
         return (result.min_id, result.max_id)
 
-    def export_segment(self, segment):
-        self.logger.info("Exporting segment {0}".format(segment))
-
     def run(self):
-        """
-        foo
-        """
-        for segment in self._segments:
-            self.export_segment(segment)
+        for interval in self._intervals:
+            self.logger.info("Exporting {0}".format(interval))
+            for block in Block.blocks_covering_interval(interval):
+                self._exporter.export(self._database.session, ImagePackage(block))
+                self._exporter.export(self._database.session, VideoPackage(block))
 
 
 def main():
