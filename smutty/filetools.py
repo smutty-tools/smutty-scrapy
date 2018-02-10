@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import os
 
@@ -30,3 +31,16 @@ class IntegerStateFile:
     def delete(self):
         self.logger.debug("Deleting state file %s", self.file_name)
         os.remove(self.file_name)
+
+
+def md5_file(file_path):
+    hasher = hashlib.md5()
+    block_size = 4*1024
+    with open(file_path, 'rb', buffering=0) as file_obj:
+        while True:
+            block = file_obj.read(block_size)
+            if not block:
+                break
+            hasher.update(block)
+    result = hasher.hexdigest()
+    return result

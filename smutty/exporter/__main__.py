@@ -1,6 +1,10 @@
 import argparse
+import json
 import logging
+import lzma
+import shutil
 import sys
+import tempfile
 
 import sqlalchemy
 
@@ -9,7 +13,7 @@ from path import Path
 from smutty.db import DatabaseConfiguration, DatabaseSession
 from smutty.config import ConfigurationFile
 from smutty.exceptions import SmuttyException
-from smutty.filetools import IntegerStateFile
+from smutty.filetools import IntegerStateFile, md5_file
 from smutty.models import Item, Image, Video, create_all_tables
 
 
@@ -59,6 +63,12 @@ class Package:
     def db_items(self, db_session):
         return self._block.items(db_session, self._item_class)
 
+    def name(self):
+        return "{0}-{1}-{2}".format(
+            self._item_class.__name__.lower(),
+            self._block.min_id,
+            self._block.max_id)
+
 
 class ImagePackage(Package):
 
@@ -74,19 +84,56 @@ class VideoPackage(Package):
 
 class Exporter:
 
+    LZMA_SETTINGS = {
+        "format": lzma.FORMAT_XZ,
+        "check": lzma.CHECK_SHA256,
+        "preset": lzma.PRESET_DEFAULT,
+    }
+
     def __init__(self, destination_directory):
         self._destination_directory = Path(destination_directory).expand().abspath()
-        logging.info("Output directory is {0}".format(self._destination_directory))
+        self._destination_directory.mkdir_p()
+        logging.info("Output directory is %s", self._destination_directory)
 
     def __repr__(self):
         return "{0}({_destination_directory}, {with_tags})".format(self.__class__.__name__, **self.__dict__)
 
-    def export(self, db_session, package):
-        logging.info("Exporting package {0}".format(package))
+    @staticmethod
+    def export_to_jsonl(db_session, package, file_obj):
         for item in package.db_items(db_session):
             item = item.export_dict()
             # tags are sorted so that exporter output is stable
             item['tags'].sort()
+            json_data = json.dumps(item, sort_keys=True)
+            file_obj.write(json_data.encode())
+            file_obj.write("\n".encode())
+
+    def export(self, db_session, package):
+        tmp_fileobj = None
+        try:
+            # write to temporary disk storage
+            with tempfile.NamedTemporaryFile(mode="wb", delete=False) as tmp_fileobj:
+                logging.debug("Exporting %s to temporary file %s", package, tmp_fileobj.name)
+                with lzma.LZMAFile(tmp_fileobj, mode="w", **self.LZMA_SETTINGS) as lzma_fileobj:
+                    self.export_to_jsonl(db_session, package, lzma_fileobj)
+
+            # finalize name and location
+            pkg_name = "{0}-{1}.jsonl.xz".format(package.name(), md5_file(tmp_fileobj.name))
+            pkg_path = self._destination_directory / pkg_name
+            logging.debug("Moving %s to %s", tmp_fileobj.name, pkg_path)
+            shutil.move(tmp_fileobj.name, pkg_path)
+            logging.info("Generated %s", pkg_path.name)
+
+        finally:
+            # cleanup temporary file
+            if tmp_fileobj is not None:
+                tmp_path = Path(tmp_fileobj.name)
+                try:
+                    tmp_path.remove()
+                except FileNotFoundError:
+                    pass
+                else:
+                    logging.debug("Removed temporary file %s", tmp_path)
 
 
 class App:
