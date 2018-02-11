@@ -143,6 +143,7 @@ class App:
 
         # analyze commande line arguments
         parser = argparse.ArgumentParser(description="Smutty metadata exporter")
+        parser.add_argument("-o", "--output", help="output directory", default=False)
         parser.add_argument("-i", "--index-only", action='store_true', default=False)
         parser.add_argument("-m", dest="min_id", type=int)
         parser.add_argument("-M", dest="max_id", type=int)
@@ -151,13 +152,18 @@ class App:
 
         # load configuration
         self._config = ConfigurationFile(args.config)
+
+        # setup state files
         self._highest_exporter_id_state = IntegerStateFile(self._config.get('exporter', 'highest_exporter_id'))
         self._lowest_exporter_id_state = IntegerStateFile(self._config.get('exporter', 'lowest_exporter_id'))
         self._lowest_scraper_id_state = IntegerStateFile(self._config.get('scraper', 'lowest_scraper_id'))
-        self._exporter = Exporter(self._config.get('exporter', 'output_directory'))
-        database_url = DatabaseConfiguration(self._config.get('database')).url
+
+        # prepare target directory
+        output_directory = args.output or self._config.get('exporter', 'output_directory')
+        self._exporter = Exporter(output_directory)
 
         # prepare database
+        database_url = DatabaseConfiguration(self._config.get('database')).url
         self._database = DatabaseSession(database_url)
         create_all_tables(self._database.engine)
 
