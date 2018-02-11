@@ -2,6 +2,7 @@ import hashlib
 import logging
 import os
 
+from path import Path
 
 class IntegerStateFile:
 
@@ -44,3 +45,16 @@ def md5_file(file_path):
             hasher.update(block)
     result = hasher.hexdigest()
     return result
+
+
+def delete_file(file_name, swallow_exceptions=True):
+    file_path = Path(file_name).expand().abspath()
+    logging.debug("Deleting %s", file_path)
+    try:
+        file_path.remove()
+        file_path.remove()
+    except FileNotFoundError:
+        if not swallow_exceptions:
+            raise
+    else:
+        logging.debug("Removed file %s", file_path)
