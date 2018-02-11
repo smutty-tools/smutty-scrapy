@@ -21,7 +21,10 @@ class PackageSerializer:
 
     @classmethod
     def serialize_package(cls, package, db_session, file_obj):
-        for item in package.db_items(db_session):
+        """
+        Order items by id so that exporter output is stable
+        """
+        for item in package.db_items(db_session, sorted_by_id=True):
             cls.serialize_item(item, file_obj)
 
     def serialize(self, package, db_session):
@@ -77,7 +80,7 @@ class JsonlPackageSerializer(PackageSerializer):
     @classmethod
     def package_file_name(cls, package, hash_digest):
         """
-        Re-implementation required in sub-classes
+        IMPORTANT: Re-implementation required in sub-classes
         """
         return "{0}-{1}.jsonl".format(package.name(), hash_digest)
 
@@ -85,8 +88,7 @@ class JsonlPackageSerializer(PackageSerializer):
     def serialize_item(cls, item, file_obj):
         """
         Provide a default implementation for sub-classes
-
-        IMPORTANT: tags are sorted so that exporter output is stable
+        Tags are sorted so that exporter output is stable
         """
         item = item.export_dict()
         item['tags'].sort()

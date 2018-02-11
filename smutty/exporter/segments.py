@@ -29,4 +29,4 @@ class Block(Interval):
         return db_session.query(item_class).filter(
                 self.min_id <= item_class.item_id,
                 item_class.item_id <= self.max_id
-            ).order_by(item_class.item_id)
+            )
