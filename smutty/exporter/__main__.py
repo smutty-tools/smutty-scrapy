@@ -98,15 +98,19 @@ class Exporter:
     def __repr__(self):
         return "{0}({_destination_directory}, {with_tags})".format(self.__class__.__name__, **self.__dict__)
 
-    @staticmethod
-    def export_to_jsonl(db_session, package, file_obj):
+    @classmethod
+    def serialize_to_jsonl(cls, item, file_obj):
+        item = item.export_dict()
+        # tags are sorted so that exporter output is stable
+        item['tags'].sort()
+        json_data = json.dumps(item, sort_keys=True)
+        file_obj.write(json_data.encode())
+        file_obj.write("\n".encode())
+
+    @classmethod
+    def serialize_package(cls, package, db_session, file_obj):
         for item in package.db_items(db_session):
-            item = item.export_dict()
-            # tags are sorted so that exporter output is stable
-            item['tags'].sort()
-            json_data = json.dumps(item, sort_keys=True)
-            file_obj.write(json_data.encode())
-            file_obj.write("\n".encode())
+            cls.serialize_to_jsonl(item, file_obj)
 
     def export(self, db_session, package):
         tmp_fileobj = None
@@ -115,7 +119,7 @@ class Exporter:
             with tempfile.NamedTemporaryFile(mode="wb", delete=False) as tmp_fileobj:
                 logging.debug("Exporting %s to temporary file %s", package, tmp_fileobj.name)
                 with lzma.LZMAFile(tmp_fileobj, mode="w", **self.LZMA_SETTINGS) as lzma_fileobj:
-                    self.export_to_jsonl(db_session, package, lzma_fileobj)
+                    self.serialize_package(package, db_session, lzma_fileobj)
 
             # finalize name and location
             pkg_name = "{0}-{1}.jsonl.xz".format(package.name(), md5_file(tmp_fileobj.name))
