@@ -1,143 +1,18 @@
 import argparse
-import json
 import logging
-import lzma
-import shutil
 import sys
-import tempfile
 
 import sqlalchemy
-
-from path import Path
 
 from smutty.db import DatabaseConfiguration, DatabaseSession
 from smutty.config import ConfigurationFile
 from smutty.exceptions import SmuttyException
-from smutty.filetools import IntegerStateFile, md5_file
-from smutty.models import Item, Image, Video, create_all_tables
+from smutty.filetools import IntegerStateFile
+from smutty.models import Item, create_all_tables
 
-
-class Interval:
-
-    def __init__(self, min_id, max_id):
-        assert min_id <= max_id
-        self.min_id = min_id
-        self.max_id = max_id
-
-    def __repr__(self):
-        return "{0}({min_id}, {max_id})".format(self.__class__.__name__, **self.__dict__)
-
-
-class Block(Interval):
-
-    SIZE = 10000
-
-    def __init__(self, min_id, max_id):
-        super().__init__(min_id, max_id)
-
-    @classmethod
-    def blocks_covering_interval(cls, interval):
-        assert cls.SIZE > 0
-        lowest_id = interval.min_id - interval.min_id % cls.SIZE
-        highest_id = interval.max_id - interval.max_id % cls.SIZE
-        for base in range(lowest_id, highest_id + 1, cls.SIZE):
-            yield Block(base, base + cls.SIZE - 1)
-
-    def items(self, db_session, item_class):
-        # query is sorted so that exporter output is stable
-        return db_session.query(item_class).filter(
-                self.min_id <= item_class.item_id,
-                item_class.item_id <= self.max_id
-            ).order_by(item_class.item_id)
-
-
-class Package:
-
-    def __init__(self, block, item_class):
-        self._block = block
-        self._item_class = item_class
-
-    def __repr__(self):
-        return "{0}({_block}, {_item_class.__name__})".format(self.__class__.__name__, **self.__dict__)
-
-    def db_items(self, db_session):
-        return self._block.items(db_session, self._item_class)
-
-    def name(self):
-        return "{0}-{1}-{2}".format(
-            self._item_class.__name__.lower(),
-            self._block.min_id,
-            self._block.max_id)
-
-
-class ImagePackage(Package):
-
-    def __init__(self, block):
-        super().__init__(block, Image)
-
-
-class VideoPackage(Package):
-
-    def __init__(self, block):
-        super().__init__(block, Video)
-
-
-class Exporter:
-
-    LZMA_SETTINGS = {
-        "format": lzma.FORMAT_XZ,
-        "check": lzma.CHECK_SHA256,
-        "preset": lzma.PRESET_DEFAULT,
-    }
-
-    def __init__(self, destination_directory):
-        self._destination_directory = Path(destination_directory).expand().abspath()
-        self._destination_directory.mkdir_p()
-        logging.info("Output directory is %s", self._destination_directory)
-
-    def __repr__(self):
-        return "{0}({_destination_directory}, {with_tags})".format(self.__class__.__name__, **self.__dict__)
-
-    @classmethod
-    def serialize_to_jsonl(cls, item, file_obj):
-        item = item.export_dict()
-        # tags are sorted so that exporter output is stable
-        item['tags'].sort()
-        json_data = json.dumps(item, sort_keys=True)
-        file_obj.write(json_data.encode())
-        file_obj.write("\n".encode())
-
-    @classmethod
-    def serialize_package(cls, package, db_session, file_obj):
-        for item in package.db_items(db_session):
-            cls.serialize_to_jsonl(item, file_obj)
-
-    def export(self, db_session, package):
-        tmp_fileobj = None
-        try:
-            # write to temporary disk storage
-            with tempfile.NamedTemporaryFile(mode="wb", delete=False) as tmp_fileobj:
-                logging.debug("Exporting %s to temporary file %s", package, tmp_fileobj.name)
-                with lzma.LZMAFile(tmp_fileobj, mode="w", **self.LZMA_SETTINGS) as lzma_fileobj:
-                    self.serialize_package(package, db_session, lzma_fileobj)
-
-            # finalize name and location
-            pkg_name = "{0}-{1}.jsonl.xz".format(package.name(), md5_file(tmp_fileobj.name))
-            pkg_path = self._destination_directory / pkg_name
-            logging.debug("Moving %s to %s", tmp_fileobj.name, pkg_path)
-            shutil.move(tmp_fileobj.name, pkg_path)
-            logging.info("Generated %s", pkg_path.name)
-
-        finally:
-            # cleanup temporary file
-            if tmp_fileobj is not None:
-                tmp_path = Path(tmp_fileobj.name)
-                try:
-                    tmp_path.remove()
-                except FileNotFoundError:
-                    pass
-                else:
-                    logging.debug("Removed temporary file %s", tmp_path)
+from smutty.exporter.serializers import LzmaJsonlPackageSerializer
+from smutty.exporter.segments import Interval, Block
+from smutty.exporter.packages import ImagePackage, VideoPackage
 
 
 class App:
@@ -164,7 +39,7 @@ class App:
 
         # prepare target directory
         output_directory = args.output or self._config.get('exporter', 'output_directory')
-        self._exporter = Exporter(output_directory)
+        self._serializer = LzmaJsonlPackageSerializer(output_directory)
 
         # prepare database
         database_url = DatabaseConfiguration(self._config.get('database')).url
@@ -236,8 +111,8 @@ class App:
         for interval in self._intervals:
             logging.info("Exporting %s", interval)
             for block in Block.blocks_covering_interval(interval):
-                self._exporter.export(self._database.session, ImagePackage(block))
-                self._exporter.export(self._database.session, VideoPackage(block))
+                self._serializer.serialize(ImagePackage(block), self._database.session)
+                self._serializer.serialize(VideoPackage(block), self._database.session)
 
 
 def main():
