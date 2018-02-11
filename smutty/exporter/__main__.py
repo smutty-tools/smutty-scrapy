@@ -108,11 +108,15 @@ class App:
         return (result.min_id, result.max_id)
 
     def run(self):
+        # serialize items into packages
         for interval in self._intervals:
             logging.info("Exporting %s", interval)
             for block in Block.blocks_covering_interval(interval):
                 self._serializer.serialize(ImagePackage(block), self._database.session)
                 self._serializer.serialize(VideoPackage(block), self._database.session)
+        # store progress in state files
+        self._highest_exporter_id_state.set(self._lowest_scraper_id)
+        self._lowest_exporter_id_state.set(self._database_min_id)
 
 
 def main():
