@@ -65,7 +65,7 @@ class App:
         # database limits
         database_min_id, database_max_id = self.get_database_min_max_id()
         logging.info("Database current state limits : min_id=%s max_id=%s", database_min_id, database_max_id)
-        if database_min_id is None or database_max_id is None or database_min_id == database_max_id:
+        if database_min_id is None or database_max_id is None:
             logging.info("Nothing in database, nothing to do: exiting")
             sys.exit(0)
 
