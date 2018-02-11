@@ -90,13 +90,13 @@ class App:
 
         # low boundary expansion (exported vs db)
         if self._database_min_id < self._exporter_min_id:
-            lower_range = Interval(self._database_min_id, self._exporter_min_id)
+            lower_range = Interval(self._database_min_id, self._exporter_min_id - 1)
             self._intervals.append(lower_range)
             logging.info("Queuing lower range expansion %s", lower_range)
 
         # high boundary expansion (exported vs scraped)
         if self._exporter_max_id < self._lowest_scraper_id:
-            higher_range = Interval(self._exporter_max_id, self._lowest_scraper_id)
+            higher_range = Interval(self._exporter_max_id + 1, self._lowest_scraper_id)
             self._intervals.append(higher_range)
             logging.info("Queuing higher range expansion %s", higher_range)
 
