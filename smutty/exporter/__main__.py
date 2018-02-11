@@ -63,14 +63,14 @@ class App:
             sys.exit(0)
 
         # database limits
-        database_min_id, database_max_id = self.get_database_min_max_id()
-        logging.info("Database current state limits : min_id=%s max_id=%s", database_min_id, database_max_id)
-        if database_min_id is None or database_max_id is None:
+        self._database_min_id, database_max_id = self.get_database_min_max_id()
+        logging.info("Database current state limits : min_id=%s max_id=%s", self._database_min_id, database_max_id)
+        if self._database_min_id is None or database_max_id is None:
             logging.info("Nothing in database, nothing to do: exiting")
             sys.exit(0)
 
         # cross validations
-        if self._exporter_min_id and self._exporter_min_id < database_min_id:
+        if self._exporter_min_id and self._exporter_min_id < self._database_min_id:
             raise SmuttyException("Exporter low limit cannot be lower than database lower bound")
         if self._exporter_max_id and self._exporter_max_id > self._lowest_scraper_id:
             raise SmuttyException("Exporter high limit cannot be higher than scraper lower bound")
@@ -81,16 +81,16 @@ class App:
         # export everything and return if nothing was exported so far
         if self._exporter_min_id is None or self._exporter_max_id is None:
             logging.info("No exporter state available, exporting everything scraper produced")
-            whole_range = Interval(database_min_id, self._lowest_scraper_id)
+            whole_range = Interval(self._database_min_id, self._lowest_scraper_id)
             self._intervals.append(whole_range)
             return
 
         # here the situation is expected to be
-        assert database_min_id <= self._exporter_min_id <= self._exporter_max_id <= self._lowest_scraper_id
+        assert self._database_min_id <= self._exporter_min_id <= self._exporter_max_id <= self._lowest_scraper_id
 
         # low boundary expansion (exported vs db)
-        if database_min_id < self._exporter_min_id:
-            lower_range = Interval(database_min_id, self._exporter_min_id)
+        if self._database_min_id < self._exporter_min_id:
+            lower_range = Interval(self._database_min_id, self._exporter_min_id)
             self._intervals.append(lower_range)
             logging.info("Queuing lower range expansion %s", lower_range)
 
