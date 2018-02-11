@@ -81,7 +81,7 @@ class App:
         # export everything and return if nothing was exported so far
         if self._exporter_min_id is None or self._exporter_max_id is None:
             logging.info("No exporter state available, exporting everything scraper produced")
-            whole_range = Interval(database_min_id, database_max_id)
+            whole_range = Interval(database_min_id, self._lowest_scraper_id)
             self._intervals.append(whole_range)
             return
 
