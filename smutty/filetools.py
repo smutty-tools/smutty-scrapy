@@ -4,6 +4,7 @@ import os
 
 from path import Path
 
+
 class IntegerStateFile:
 
     def __init__(self, file_name, logger=None):
@@ -32,6 +33,20 @@ class IntegerStateFile:
     def delete(self):
         self.logger.debug("Deleting state file %s", self.file_name)
         os.remove(self.file_name)
+
+
+class OutputDirectory:
+
+    def __init__(self, destination_directory):
+        self._destination_directory = Path(destination_directory).expand().abspath()
+        self._destination_directory.mkdir_p()
+
+    def __repr__(self):
+        return self._destination_directory
+
+    @property
+    def path(self):
+        return self._destination_directory
 
 
 def md5_file(file_path):

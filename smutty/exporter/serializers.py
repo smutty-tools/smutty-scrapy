@@ -12,16 +12,14 @@ from smutty.filetools import md5_file, delete_file
 class PackageSerializer:
 
     def __init__(self, destination_directory):
-        self._destination_directory = Path(destination_directory).expand().abspath()
-        self._destination_directory.mkdir_p()
-        logging.info("Output directory is %s", self._destination_directory)
+        self._destination_directory = destination_directory
 
     def __repr__(self):
         return "{0}({_destination_directory})".format(self.__class__.__name__, **self.__dict__)
 
     def remove_existing_package_files(self, package):
         pattern = "{0}-*".format(package.name())
-        for file in self._destination_directory.files(pattern):
+        for file in self._destination_directory.path.files(pattern):
             logging.debug("Deleting present package file %s", file)
             file.remove()
 
@@ -49,7 +47,7 @@ class PackageSerializer:
 
             # finalize name and location
             pkg_name = self.package_file_name(package, md5_file(tmp_fileobj.name))
-            pkg_path = self._destination_directory / pkg_name
+            pkg_path = self._destination_directory.path / pkg_name
             logging.debug("Moving %s to %s", tmp_fileobj.name, pkg_path)
             shutil.move(tmp_fileobj.name, pkg_path)
             logging.info("Generated %s", pkg_path.name)

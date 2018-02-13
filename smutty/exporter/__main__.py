@@ -7,7 +7,7 @@ import sqlalchemy
 from smutty.db import DatabaseConfiguration, DatabaseSession
 from smutty.config import ConfigurationFile
 from smutty.exceptions import SmuttyException
-from smutty.filetools import IntegerStateFile
+from smutty.filetools import IntegerStateFile, OutputDirectory
 from smutty.models import Item, create_all_tables
 
 from smutty.exporter.serializers import LzmaJsonlPackageSerializer
@@ -39,7 +39,9 @@ class App:
 
         # prepare target directory
         output_directory = args.output or self._config.get('exporter', 'output_directory')
-        self._serializer = LzmaJsonlPackageSerializer(output_directory)
+        self._output_directory = OutputDirectory(output_directory)
+        logging.info("Output directory is %s", self._output_directory)
+        self._serializer = LzmaJsonlPackageSerializer(self._output_directory)
 
         # prepare database
         database_url = DatabaseConfiguration(self._config.get('database')).url
