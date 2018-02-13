@@ -19,6 +19,12 @@ class PackageSerializer:
     def __repr__(self):
         return "{0}({_destination_directory})".format(self.__class__.__name__, **self.__dict__)
 
+    def remove_existing_package_files(self, package):
+        pattern = "{0}-*".format(package.name())
+        for file in self._destination_directory.files(pattern):
+            logging.debug("Deleting present package file %s", file)
+            file.remove()
+
     @classmethod
     def serialize_package(cls, package, db_session, file_obj):
         """
@@ -33,6 +39,9 @@ class PackageSerializer:
         """
         tmp_fileobj = None
         try:
+            # cleanup
+            self.remove_existing_package_files(package)
+
             # write to temporary disk storage
             with tempfile.NamedTemporaryFile(mode="wb", delete=False) as tmp_fileobj:
                 logging.debug("Exporting %s to temporary file %s", package, tmp_fileobj.name)
