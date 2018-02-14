@@ -4,8 +4,6 @@ import lzma
 import shutil
 import tempfile
 
-from path import Path
-
 from smutty.filetools import md5_file, delete_file
 
 
