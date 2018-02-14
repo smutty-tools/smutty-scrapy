@@ -1,6 +1,8 @@
 import hashlib
 import logging
 import os
+import shutil
+import tempfile
 
 from path import Path
 
@@ -47,6 +49,40 @@ class OutputDirectory:
     @property
     def path(self):
         return self._destination_directory
+
+
+class FinalizedTempFile:
+
+    def __init__(self, final_path, file_mode):
+        self.final_path = final_path
+        self.file_mode = file_mode
+        self._temp_fileobj = None
+
+    def __enter__(self):
+        self._temp_fileobj = tempfile.NamedTemporaryFile(mode=self.file_mode, delete=False)
+        return self._temp_fileobj
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        # close temporary file before doing anything
+        if self._temp_fileobj is not None:
+            self._temp_fileobj.close()
+        # on success (not exiting due to exceptions)
+        try:
+            if exc_type is None:
+                # move temporary file to destination
+                self._finalize()
+        finally:
+            # always cleanup
+            self._cleanup()
+
+    def _finalize(self):
+        logging.debug("Moving %s to %s", self._temp_fileobj.name, self.final_path)
+        shutil.move(self._temp_fileobj.name, self.final_path)
+        logging.info("Finalized %s", self.final_path)
+
+    def _cleanup(self):
+        if self._temp_fileobj is not None:
+            delete_file(self._temp_fileobj.name)
 
 
 def md5_file(file_path):
