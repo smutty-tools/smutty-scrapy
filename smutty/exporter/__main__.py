@@ -41,6 +41,7 @@ class App:
         output_directory = args.output or self._config.get('exporter', 'output_directory')
         self._output_directory = OutputDirectory(output_directory)
         logging.info("Output directory is %s", self._output_directory)
+        self._indexer = LzmaJsonIndexer(self._output_directory)
         self._serializer = LzmaJsonlPackageSerializer(self._output_directory)
 
         # prepare database
@@ -124,6 +125,9 @@ class App:
         # store progress in state files
         self._highest_exporter_id_state.set(self._lowest_scraper_id)
         self._lowest_exporter_id_state.set(self._database_min_id)
+
+        # build index
+        self._indexer.generate()
 
 
 def main():
