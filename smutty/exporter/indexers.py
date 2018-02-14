@@ -2,10 +2,8 @@ import json
 import logging
 import lzma
 import re
-import shutil
-import tempfile
 
-from smutty.filetools import delete_file
+from smutty.filetools import FinalizedTempFile
 
 
 class Indexer:
@@ -75,27 +73,13 @@ class Indexer:
         """
         Serialize to a temporary file, then moves result to requested destination
         """
-        tmp_fileobj = None
-        try:
-            # cleanup
-            self.remove_existing_index_files()
-
-            # write to temporary disk storage
-            with tempfile.NamedTemporaryFile(mode="wb", delete=False) as tmp_fileobj:
-                logging.debug("Generating %s to temporary file %s", self.INDEX_NAME, tmp_fileobj.name)
-                self.serialize_info(tmp_fileobj)
-
-            # finalize name and location
-            index_name = self.index_file_name()
-            pkg_path = self._destination_directory.path / index_name
-            logging.debug("Moving %s to %s", tmp_fileobj.name, pkg_path)
-            shutil.move(tmp_fileobj.name, pkg_path)
-            logging.info("Generated %s", pkg_path.name)
-
-        finally:
-            # cleanup temporary file
-            if tmp_fileobj is not None:
-                delete_file(tmp_fileobj.name)
+        self.remove_existing_index_files()
+        index_name = self.index_file_name()
+        pkg_path = self._destination_directory.path / index_name
+        with FinalizedTempFile(pkg_path, "wb") as tmp_fileobj:
+            logging.debug("Generating %s to temporary file %s", self.INDEX_NAME, tmp_fileobj.name)
+            self.serialize_info(tmp_fileobj)
+            logging.info("Generated index file %s", pkg_path)
 
     def generate(self):
         logging.info("Building index of packages")

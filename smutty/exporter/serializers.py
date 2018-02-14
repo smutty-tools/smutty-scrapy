@@ -1,10 +1,8 @@
 import json
 import logging
 import lzma
-import shutil
-import tempfile
 
-from smutty.filetools import md5_file, delete_file
+from smutty.filetools import md5_file, FinalizedTempFile
 
 
 class PackageSerializer:
@@ -33,27 +31,19 @@ class PackageSerializer:
         """
         Serialize to a temporary file, then moves result to requested destination
         """
-        tmp_fileobj = None
-        try:
-            # cleanup
-            self.remove_existing_package_files(package)
-
-            # write to temporary disk storage
-            with tempfile.NamedTemporaryFile(mode="wb", delete=False) as tmp_fileobj:
-                logging.debug("Exporting %s to temporary file %s", package, tmp_fileobj.name)
-                self.serialize_to_file(package, db_session, tmp_fileobj)
-
-            # finalize name and location
-            pkg_name = self.package_file_name(package, md5_file(tmp_fileobj.name))
-            pkg_path = self._destination_directory.path / pkg_name
-            logging.debug("Moving %s to %s", tmp_fileobj.name, pkg_path)
-            shutil.move(tmp_fileobj.name, pkg_path)
-            logging.info("Generated %s", pkg_path.name)
-
-        finally:
-            # cleanup temporary file
-            if tmp_fileobj is not None:
-                delete_file(tmp_fileobj.name)
+        self.remove_existing_package_files(package)
+        # first pass: generate content
+        pkg_name = self.package_file_name(package, "INTERMEDIATE")
+        pkg_path_intermediate = self._destination_directory.path / pkg_name
+        with FinalizedTempFile(pkg_path_intermediate, "wb") as tmp_fileobj:
+            logging.debug("Exporting %s to temporary file %s", package, tmp_fileobj.name)
+            self.serialize_to_file(package, db_session, tmp_fileobj)
+        # second pass: generate hash and rename
+        hash_digest = md5_file(pkg_path_intermediate)
+        pkg_name = self.package_file_name(package, hash_digest)
+        pkg_path_final = self._destination_directory.path / pkg_name
+        pkg_path_intermediate.rename(pkg_path_final)
+        logging.info("Generated package file %s", pkg_path_final)
 
     @classmethod
     def serialize_to_file(cls, package, db_session, file_obj):
