@@ -55,6 +55,8 @@ class Indexer:
                 for name in ['content_type', 'min_id', 'max_id', 'hash_digest']
             }
             self._package_info.append(info)
+        # sort entries according to hash (so that exporter runs are stable)
+        self._package_info.sort(key=lambda x: x['hash_digest'])
         logging.info("%s packages found", len(self._package_info))
 
     def serialize_info(self, file_obj):
