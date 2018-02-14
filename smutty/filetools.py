@@ -100,12 +100,11 @@ def md5_file(file_path):
 
 def delete_file(file_name, swallow_exceptions=True):
     file_path = Path(file_name).expand().abspath()
-    logging.debug("Deleting %s", file_path)
+    logging.debug("Ensuring that temporary file %s is removed", file_path)
     try:
-        file_path.remove()
         file_path.remove()
     except FileNotFoundError:
         if not swallow_exceptions:
             raise
     else:
-        logging.debug("Removed file %s", file_path)
+        logging.debug("Removed temporary file %s", file_path)
