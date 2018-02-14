@@ -73,11 +73,11 @@ class JsonlPackageSerializer(PackageSerializer):
         super().__init__(destination_directory)
 
     @classmethod
-    def package_file_name(cls, package, hash_digest):
+    def package_file_name(cls, package, suffix):
         """
         IMPORTANT: Re-implementation required in sub-classes
         """
-        return "{0}-{1}.jsonl".format(package.name(), hash_digest)
+        return "{0}-{1}.jsonl".format(package.name(), suffix)
 
     @classmethod
     def serialize_item(cls, item, file_obj):
@@ -104,8 +104,8 @@ class LzmaJsonlPackageSerializer(JsonlPackageSerializer):
         super().__init__(destination_directory)
 
     @classmethod
-    def package_file_name(cls, package, hash_digest):
-        return "{0}-{1}.jsonl.xz".format(package.name(), hash_digest)
+    def package_file_name(cls, package, suffix):
+        return "{0}-{1}.jsonl.xz".format(package.name(), suffix)
 
     @classmethod
     def serialize_to_file(cls, package, db_session, file_obj):
