@@ -78,7 +78,6 @@ class FinalizedTempFile:
     def _finalize(self):
         logging.debug("Moving %s to %s", self._temp_fileobj.name, self.final_path)
         shutil.move(self._temp_fileobj.name, self.final_path)
-        logging.info("Finalized %s", self.final_path)
 
     def _cleanup(self):
         if self._temp_fileobj is not None:
