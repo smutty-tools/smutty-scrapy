@@ -7,7 +7,7 @@ import sqlalchemy
 from ..config import ConfigurationFile
 from ..db import DatabaseConfiguration, DatabaseSession
 from ..exceptions import SmuttyException
-from ..filetools import IntegerStateFile, OutputDirectory
+from ..filetools import IntegerStateFile, MustExistDirectory
 from ..models import Item, create_all_tables
 
 from .indexers import LzmaJsonIndexer
@@ -40,7 +40,7 @@ class App:
 
         # prepare target directory
         output_directory = args.output or self._config.get('exporter', 'output_directory')
-        self._output_directory = OutputDirectory(output_directory)
+        self._output_directory = MustExistDirectory(output_directory)
         logging.info("Output directory is %s", self._output_directory)
         self._indexer = LzmaJsonIndexer(self._output_directory, "wb")
         self._serializer = LzmaJsonlPackageSerializer(self._output_directory, "wb")

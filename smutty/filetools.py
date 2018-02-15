@@ -37,18 +37,18 @@ class IntegerStateFile:
         os.remove(self.file_name)
 
 
-class OutputDirectory:
+class MustExistDirectory:
 
-    def __init__(self, destination_directory):
-        self._destination_directory = Path(destination_directory).expand().abspath()
-        self._destination_directory.mkdir_p()
+    def __init__(self, desired_path):
+        self._full_path = Path(desired_path).expand().abspath()
+        self._full_path.mkdir_p()
 
     def __repr__(self):
-        return self._destination_directory
+        return self._full_path
 
     @property
     def path(self):
-        return self._destination_directory
+        return self._full_path
 
 
 class FinalizedTempFile:
