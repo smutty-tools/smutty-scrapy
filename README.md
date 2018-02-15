@@ -56,6 +56,8 @@ This module uses state files, to track progression between runs :
 
 Export expansion is done at the boundaries, for efficiency
 
+Now you can host your generated files anywhere you want, for example upload them somewhere using https://rclone.org
+
 # initial database setup
 
 The database schema name is currently fixed to `smutty` and is not configurable
