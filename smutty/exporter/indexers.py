@@ -1,8 +1,8 @@
 import json
 import logging
-import lzma
 import re
 
+from smutty.compression import LzmaCompression
 from smutty.filetools import FinalizedTempFile
 
 
@@ -114,12 +114,6 @@ class JsonIndexer(Indexer):
 
 class LzmaJsonIndexer(JsonIndexer):
 
-    LZMA_SETTINGS = {
-        "format": lzma.FORMAT_XZ,
-        "check": lzma.CHECK_SHA256,
-        "preset": lzma.PRESET_DEFAULT,
-    }
-
     def __init__(self, destination_directory, file_mode):
         super().__init__(destination_directory, file_mode)
 
@@ -139,5 +133,5 @@ class LzmaJsonIndexer(JsonIndexer):
         Overrides default implementation
         Wraps serialization into a compressed file
         """
-        with lzma.LZMAFile(file_obj, mode=self._file_mode, **self.LZMA_SETTINGS) as lzma_fileobj:
+        with LzmaCompression(file_obj, self._file_mode) as lzma_fileobj:
             self.serialize_index(lzma_fileobj)

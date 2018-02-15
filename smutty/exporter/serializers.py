@@ -1,7 +1,7 @@
 import json
 import logging
-import lzma
 
+from smutty.compression import LzmaCompression
 from smutty.filetools import md5_file, FinalizedTempFile
 
 
@@ -95,12 +95,6 @@ class JsonlPackageSerializer(PackageSerializer):
 
 class LzmaJsonlPackageSerializer(JsonlPackageSerializer):
 
-    LZMA_SETTINGS = {
-        "format": lzma.FORMAT_XZ,
-        "check": lzma.CHECK_SHA256,
-        "preset": lzma.PRESET_DEFAULT,
-    }
-
     def __init__(self, destination_directory, file_mode):
         super().__init__(destination_directory, file_mode)
 
@@ -113,5 +107,5 @@ class LzmaJsonlPackageSerializer(JsonlPackageSerializer):
         Overrides default implementation
         Wraps serialization into a compressed file
         """
-        with lzma.LZMAFile(file_obj, mode=self._file_mode, **self.LZMA_SETTINGS) as lzma_fileobj:
+        with LzmaCompression(file_obj, self._file_mode) as lzma_fileobj:
             self.serialize_package(package, db_session, lzma_fileobj)
