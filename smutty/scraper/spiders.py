@@ -4,8 +4,9 @@ import pytz
 import scrapy
 import time
 
-from smutty.filetools import IntegerStateFile
-from smutty.scraper.items import SmuttyImage, SmuttyVideo
+from ..filetools import IntegerStateFile
+
+from .items import SmuttyImage, SmuttyVideo
 
 
 class SmuttySpider(scrapy.Spider):

@@ -1,8 +1,8 @@
 import json
 import logging
 
-from smutty.compression import LzmaCompression
-from smutty.filetools import md5_file, FinalizedTempFile
+from ..compression import LzmaCompression
+from ..filetools import md5_file, FinalizedTempFile
 
 
 class PackageSerializer:

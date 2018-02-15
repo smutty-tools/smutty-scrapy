@@ -2,8 +2,8 @@ import json
 import logging
 import re
 
-from smutty.compression import LzmaCompression
-from smutty.filetools import FinalizedTempFile
+from ..compression import LzmaCompression
+from ..filetools import FinalizedTempFile
 
 
 class Indexer:

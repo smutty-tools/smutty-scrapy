@@ -1,4 +1,4 @@
-from smutty.models import Image, Video
+from ..models import Image, Video
 
 
 class Package:

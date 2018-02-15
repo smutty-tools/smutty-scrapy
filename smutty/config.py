@@ -1,6 +1,6 @@
 import configparser
 
-from smutty.exceptions import SmuttyException
+from .exceptions import SmuttyException
 
 
 class ConfigurationFile:

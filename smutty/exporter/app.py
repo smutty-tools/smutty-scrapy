@@ -4,16 +4,16 @@ import sys
 
 import sqlalchemy
 
-from smutty.config import ConfigurationFile
-from smutty.db import DatabaseConfiguration, DatabaseSession
-from smutty.exceptions import SmuttyException
-from smutty.filetools import IntegerStateFile, OutputDirectory
-from smutty.models import Item, create_all_tables
+from ..config import ConfigurationFile
+from ..db import DatabaseConfiguration, DatabaseSession
+from ..exceptions import SmuttyException
+from ..filetools import IntegerStateFile, OutputDirectory
+from ..models import Item, create_all_tables
 
-from smutty.exporter.indexers import LzmaJsonIndexer
-from smutty.exporter.packages import ImagePackage, VideoPackage
-from smutty.exporter.segments import Interval, Block
-from smutty.exporter.serializers import LzmaJsonlPackageSerializer
+from .indexers import LzmaJsonIndexer
+from .packages import ImagePackage, VideoPackage
+from .segments import Interval, Block
+from .serializers import LzmaJsonlPackageSerializer
 
 
 class App:

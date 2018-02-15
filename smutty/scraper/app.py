@@ -2,20 +2,20 @@
 foo
 """
 import argparse
-import logging
 import sys
 
 import scrapy
 import scrapy.crawler
 import scrapy.utils.project
 
+from ..config import ConfigurationFile
+from ..db import DatabaseConfiguration
+from ..exceptions import SmuttyException
+from ..filetools import IntegerStateFile
+
 import smutty.scraper.settings
 
-from smutty.db import DatabaseConfiguration
-from smutty.config import ConfigurationFile
-from smutty.exceptions import SmuttyException
-from smutty.filetools import IntegerStateFile
-from smutty.scraper.spiders import SmuttySpider
+from .spiders import SmuttySpider
 
 
 class App:

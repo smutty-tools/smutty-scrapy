@@ -1,8 +1,9 @@
 import logging
 
-from smutty.db import DatabaseSession
-from smutty.models import Tag, Item, Image, Video, create_all_tables
-from smutty.scraper.items import SmuttyImage, SmuttyVideo
+from ..db import DatabaseSession
+from ..models import Tag, Item, Image, Video, create_all_tables
+
+from .items import SmuttyImage, SmuttyVideo
 
 
 class SmuttyDatabasePipeline:
