@@ -74,7 +74,6 @@ class Indexer:
         """
         Serialize to a temporary file, then moves result to requested destination
         """
-        self.remove_existing_index_files()
         index_name = self.index_file_name()
         pkg_path = self._destination_directory.path / index_name
         with FinalizedTempFile(pkg_path, self._file_mode) as tmp_fileobj:
@@ -84,6 +83,8 @@ class Indexer:
 
     def generate(self):
         logging.info("Building index of packages")
+        # clean index files before listing packages
+        self.remove_existing_index_files()
         self.build_package_info()
         self.serialize()
 
