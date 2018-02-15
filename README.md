@@ -1,6 +1,6 @@
 # smutty-scrapy
 
-python scrapper to get site metadata into a postgresql database
+python scraper and exporter for smutty.com metadata
 
 # install
 
@@ -9,93 +9,60 @@ python scrapper to get site metadata into a postgresql database
       --no-install-suggests \
       git gcc python3-venv python3-dev
 
-    git clone https://github.com/smutty-tools/smutty-scrapy.git
-    cd smutty-scrapy
+    git clone https://github.com/smutty-tools/smutty-tools.git
+    cd smutty-tools
 
     python3 -m venv venv
     venv/bin/pip3 install wheel
     venv/bin/pip3 install -r requirements.txt
 
-# run
+For developpement using SublimeText, you can install these modules too :
 
-    venv/bin/python3 run.py [options]
+    venv/bin/pip3 install flake8
 
-# options
-
-    optional arguments:
-        -h
-        --help
-            show this help message and exit
-
-        -s N
-        --start-page N
-            starts at given page N
-
-            Default: 1
-
-        -c M
-        --page-count M
-            only scrap M pages
-
-        -m [ID]
-        --min-id [ID]
-            fetches pages and items until given id is reached
-
-            Default (if -m not provided): no id limit
-            Default (if -m provided): get latest DB id and use it as limit
-
-            NOTE: the 'new' channel provides id in descending order
-
-        -b FILE
-        --blacklist-tag-file FILE
-            ignore items which have tags in provided list
-            FILE holds a list of blacklisted tags, one word per line
-
-        -d CONFIG [CONFIG ...]
-        --database CONFIG [CONFIG ...]
-            a set of key=value defining database parameters
-
-# examples
-
-Fetching first page only :
-
-    venv/bin/python3 run.py -c 1 -d ...
-
-Resume crawling at a given page :
-
-    venv/bin/python3 run.py -s 123456 -d ...
-
-Fetch newest posts since last run :
-
-    venv/bin/python3 run.py -m -d ...
+# invocations via CRON
 
 When running the script via cron, ensure that only one runs at a time :
 
     flock -x -n /tmp/smutty.lock ...
 
-# database connection
+# configuration
 
-All of the developpement and testing has been done on Postgresql 9.6,
-and the script uses sqlalchemy, which can use other engines.
+A sample configuration file is in `config/smutty.conf`
 
-To provide connection information, use the `-d` argument with multiple
-`CONFIG` arguments, where each `CONFIG` is in `key=value` format.
+Be sure to configure the database connection according to your setup
 
-In the example below, capitalized words are placeholders for your real information :
+# scaper
 
-    ... -d drivername=postgres host=ADDRESS port=5432 \
-       username=LOGIN password=PASSWORD database=DBNAME
+This tool gets web pages from the site, extracts metadata and flushes the metadata into the database
 
-See [this SqlAlchemy documentation](http://docs.sqlalchemy.org/en/latest/core/engines.html#sqlalchemy.engine.url.URL)
-for more information on database connection settings.
+    venv/bin/python3 -m smutty.scraper -h
 
-# database setup
+This module uses state files, to track progression between runs :
+
+- `current_scraper_page` marks the current scraped page, updated per page
+- `highest_scraper_id` marks the first id seen in an still-unfinished run
+- `lowest_exporter_id` state marks the highest id available for export, updated once the run is finished
+
+# exporter
+
+This tool extracts metadata from the database, splits and packages it in statically defined and compressed files
+
+    venv/bin/python3 -m smutty.exporter -h
+
+This module uses state files, to track progression between runs :
+
+- `lowest_exporter_id` and `highest_exporter_id` states mark the range for which the export is complete
+
+Export expansion is done at the boundaries, for efficiency
+
+# initial database setup
 
 The database schema name is currently fixed to `smutty` and is not configurable
-on command line, see the first lines of `models.py` if you really need to
+on command line, see the first lines of `smutty/models.py` if you really need to
 change it.
 
-To setup your database, on a fresh Debian/Strech system, install software :
+To setup your database, on a fresh Debian/Stretch system, install software :
 
     sudo apt-get install postgresql postgresql-client --no-install-recommends
 
