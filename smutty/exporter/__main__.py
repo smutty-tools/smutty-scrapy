@@ -42,8 +42,8 @@ class App:
         output_directory = args.output or self._config.get('exporter', 'output_directory')
         self._output_directory = OutputDirectory(output_directory)
         logging.info("Output directory is %s", self._output_directory)
-        self._indexer = LzmaJsonIndexer(self._output_directory)
-        self._serializer = LzmaJsonlPackageSerializer(self._output_directory)
+        self._indexer = LzmaJsonIndexer(self._output_directory, "wb")
+        self._serializer = LzmaJsonlPackageSerializer(self._output_directory, "wb")
 
         # prepare database
         database_url = DatabaseConfiguration(self._config.get('database')).url

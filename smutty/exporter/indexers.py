@@ -12,8 +12,9 @@ class Indexer:
 
     PACKAGE_PATTERN = r"^(?P<content_type>video|image)-(?P<min_id>[0-9]+)-(?P<max_id>[0-9]+)-(?P<hash_digest>[0-9a-f]+)\b"
 
-    def __init__(self, destination_directory):
+    def __init__(self, destination_directory, file_mode):
         self._destination_directory = destination_directory
+        self._file_mode = file_mode
         self._package_info = []
 
     def __repr__(self):
@@ -76,7 +77,7 @@ class Indexer:
         self.remove_existing_index_files()
         index_name = self.index_file_name()
         pkg_path = self._destination_directory.path / index_name
-        with FinalizedTempFile(pkg_path, "wb") as tmp_fileobj:
+        with FinalizedTempFile(pkg_path, self._file_mode) as tmp_fileobj:
             logging.debug("Generating %s to temporary file %s", self.INDEX_NAME, tmp_fileobj.name)
             self.serialize_info(tmp_fileobj)
             logging.info("Generated index file %s", pkg_path)
@@ -89,8 +90,8 @@ class Indexer:
 
 class JsonIndexer(Indexer):
 
-    def __init__(self, destination_directory):
-        super().__init__(destination_directory)
+    def __init__(self, destination_directory, file_mode):
+        super().__init__(destination_directory, file_mode)
 
     @classmethod
     def package_pattern(cls):
@@ -119,8 +120,8 @@ class LzmaJsonIndexer(JsonIndexer):
         "preset": lzma.PRESET_DEFAULT,
     }
 
-    def __init__(self, destination_directory):
-        super().__init__(destination_directory)
+    def __init__(self, destination_directory, file_mode):
+        super().__init__(destination_directory, file_mode)
 
     @classmethod
     def package_pattern(cls):
@@ -138,5 +139,5 @@ class LzmaJsonIndexer(JsonIndexer):
         Overrides default implementation
         Wraps serialization into a compressed file
         """
-        with lzma.LZMAFile(file_obj, mode="w", **self.LZMA_SETTINGS) as lzma_fileobj:
+        with lzma.LZMAFile(file_obj, mode=self._file_mode, **self.LZMA_SETTINGS) as lzma_fileobj:
             self.serialize_index(lzma_fileobj)
